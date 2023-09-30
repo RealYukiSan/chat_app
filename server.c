@@ -39,8 +39,7 @@ static int create_socket(void)
         }
 
         ret = listen(fd, 10);
-        if (ret < 0)
-        {
+        if (ret < 0) {
                 perror("listen");
                 close(fd);
                 return -1;
@@ -81,8 +80,7 @@ static int listening(int fd)
         client_port = ntohs(client_addr.sin_port);
         printf("New client connected with\nip: %s\nport: %hu\n", client_ip, client_port);
 
-        while (1)
-        {
+        while (1) {
                 printf("Waiting for the client to send a message\n");
                 ret = receive_data(client_fd, data_client, "Client");
                 if (ret == -2) {
@@ -105,13 +103,10 @@ static int listening(int fd)
 static void start_event_loop(int fd)
 {
         int ret;
-        while (1)
-        {
+        while (1) {
                 ret = listening(fd);
-                if (ret < 0)
-                {
+                if (ret < 0) 
                         break;
-                }
                 
         }
         
@@ -121,10 +116,8 @@ int main(void)
 {
         int tcp_fd;
         tcp_fd = create_socket();
-        if (tcp_fd < 0)
-        {
+        if (tcp_fd < 0) 
                 return 1;
-        }
         
         start_event_loop(tcp_fd);
         return 0;
