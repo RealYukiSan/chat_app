@@ -12,3 +12,14 @@ endian = akhiran dari bytes di memory?
 network always use big endian
 
 using raw tcp client: nc program
+
+### New update
+
+- handle multiple client
+- broadcast from one to other client
+
+### New note
+
+- dynamic data on variable need to be stored as pointer and cannot stored in stack therefore use malloc
+- selain untuk optimasi, alignment memory needed in order to fit some structure data, and can be used properly
+- jika tidak di-align dengan benar dapat menyebabkan buffer overflow
