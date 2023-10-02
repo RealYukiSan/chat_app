@@ -1,6 +1,12 @@
 ## Simple Chat on TCP socket with full-duplex communication
 
-#### things that I marked with (?) indicate statements that I still have doubts about
+**things that I marked with (?) indicate statements that I still have doubts about**
+
+### Credits
+
+**Big thanks to sir [@ammarfaizi2](https://github.com/ammarfaizi2) for any support and help :grin:**
+
+**and other members on [GNU/Weeb](https://www.gnuweeb.org/)!**
 
 ### A few note
 
@@ -25,10 +31,11 @@
 - salah satu cara meng-align nya adalah dengan menggunakan `__attribute__((__packed__))`
 - buffering itu buat menghemat [resource](https://t.me/GNUWeeb/840618) dan [system call](https://t.me/GNUWeeb/840589) (?)
 
-auto flush occurs when: new line/lf, get input: `fgets` | `getchar` | `etc...`, exit
+auto flush occurs when: new line/lf, get input: `fgets` | `getchar` | `etc...`, and exit
+
 here's some example:
 ```c
-printf("> ");
+printf("> "); // by default line-buffered
 fflush(stdout); // force flush fix the issue if the auto flush not performed
 while (1);
 ```
@@ -37,6 +44,7 @@ while (1);
 file descriptor is unique identifier that hold information related to I/O operation, for example [tcp socket](https://www.google.com/search?q=sock_raw&tbm=isch&ved=2ahUKEwik993gpMuBAxW7pukKHVMsD2YQ2-cCegQIABAA&oq=sock&gs_lcp=CgNpbWcQARgAMgQIIxAnMgQIIxAnMgoIABCKBRCxAxBDMgcIABCKBRBDMggIABCABBCxAzIHCAAQigUQQzIHCAAQigUQQzIFCAAQgAQyBQgAEIAEMgUIABCABDoGCAAQBxAeOgcIABATEIAEOggIABAFEB4QEzoGCAAQHhATUPAFWL8XYOAeaANwAHgAgAFGiAHFA5IBATiYAQCgAQGqAQtnd3Mtd2l6LWltZ8ABAQ&sclient=img&ei=gWIUZeSyKrvNpgfT2LywBg&bih=993&biw=958&rlz=1C1OKWM_enID1037ID1037#imgrc=qBNgNyqHcpiROM) and some widely-known standard I/O stream and FD: stdin, stdout, and stderr and the preprocessor symbols or predefined constant in macro: `STDIN_FILENO`, `STDOUT_FILENO`, `STDERR_FILENO` respectively
 
 Diagram that shows variant of I/O device:
+
 ![I/O Example](https://i.stack.imgur.com/mcw90.jpg)
 
 image from: [What does "address space" means when talking about IO devices?](https://softwareengineering.stackexchange.com/questions/359297/what-does-address-space-means-when-talking-about-io-devices)
@@ -44,7 +52,7 @@ image from: [What does "address space" means when talking about IO devices?](htt
 ### A few terms to note:
 - buffer: some data that was held somewhere in memory
 - I/O stream<sup>[1](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c)</sup>: wide-terms for represents an input source or an output destination (?)
-- flush: write/move buffer to specified FD
+- flush: clear buffer and stream it to the specified FD
 - buffering mode on stream<sup>[1](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c)</sup>: there's three types of buffering mode, unbuffered, line-buffered, and fullbuffered, each of mode have predefined constant in macro: `_IONBF`, `_IOLBF`, and `_IOFBF` respectively, see [`man setvbuf`](https://t.me/GNUWeeb/840558) for the details of the behaviour
 - also `struct FILE *` is refer to stream and [doesn't literally to the actual file](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c#:~:text=does%20NOT%20point%20to%20the%20actual%20file)
 - There's high-level and low-level interface<sup>[2](https://stackoverflow.com/questions/15102992/what-is-the-difference-between-stdin-and-stdin-fileno#:~:text=67-,The%20interface,-.%20Like%20everyone%20else)</sup>:
