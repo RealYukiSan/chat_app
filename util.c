@@ -34,7 +34,7 @@ static int send_data_to_dst(int fd, struct data *d)
 		perror("send");
 		return -1;
 	}
-	return 0;	
+	return 0;
 }
 
 int get_input_and_send(int fd, struct data *d)

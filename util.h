@@ -9,8 +9,8 @@
 #endif
 
 struct data {
-        uint16_t len;
-        char msg[];
+	uint16_t len;
+	char msg[];
 } __packed;
 
 struct data_srv {
