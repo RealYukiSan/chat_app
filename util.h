@@ -2,7 +2,7 @@
 #define _UTIL_h
 
 #define SIZE_MSG ((1 << 16) - 1)
-#define PORT 8001
+#define PORT 8787
 
 #ifndef __packed
 #define __packed __attribute__((__packed__))
@@ -11,6 +11,11 @@
 struct data {
         uint16_t len;
         char msg[];
+} __packed;
+
+struct data_srv {
+	char sender[INET_ADDRSTRLEN + 7];
+	struct data	data; 
 } __packed;
 
 int get_input_and_send(int fd, struct data *d);

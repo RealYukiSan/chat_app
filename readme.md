@@ -25,6 +25,14 @@
 - salah satu cara meng-align nya adalah dengan menggunakan `__attribute__((__packed__))`
 - buffering itu buat menghemat [resource](https://t.me/GNUWeeb/840618) dan [system call](https://t.me/GNUWeeb/840589) (?)
 
+auto flush occurs when: new line/lf, get input: `fgets` | `getchar` | `etc...`, exit
+here's some example:
+```c
+printf("> ");
+fflush(stdout); // force flush fix the issue if the auto flush not performed
+while (1);
+```
+
 #### FD - file descriptor
 file descriptor is unique identifier that hold information related to I/O operation, for example [tcp socket](https://www.google.com/search?q=sock_raw&tbm=isch&ved=2ahUKEwik993gpMuBAxW7pukKHVMsD2YQ2-cCegQIABAA&oq=sock&gs_lcp=CgNpbWcQARgAMgQIIxAnMgQIIxAnMgoIABCKBRCxAxBDMgcIABCKBRBDMggIABCABBCxAzIHCAAQigUQQzIHCAAQigUQQzIFCAAQgAQyBQgAEIAEMgUIABCABDoGCAAQBxAeOgcIABATEIAEOggIABAFEB4QEzoGCAAQHhATUPAFWL8XYOAeaANwAHgAgAFGiAHFA5IBATiYAQCgAQGqAQtnd3Mtd2l6LWltZ8ABAQ&sclient=img&ei=gWIUZeSyKrvNpgfT2LywBg&bih=993&biw=958&rlz=1C1OKWM_enID1037ID1037#imgrc=qBNgNyqHcpiROM) and some widely-known standard I/O stream and FD: stdin, stdout, and stderr and the preprocessor symbols or predefined constant in macro: `STDIN_FILENO`, `STDOUT_FILENO`, `STDERR_FILENO` respectively
 

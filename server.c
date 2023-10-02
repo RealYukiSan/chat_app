@@ -26,10 +26,6 @@ struct ctx_server {
         struct pollfd fds[MAX_CLIENT + 1];
         struct client_state clients[MAX_CLIENT];
 };
-struct data_srv {
-	char sender[INET_ADDRSTRLEN + 7];
-	struct data	data; 
-} __packed;
 
 static int create_server(void) {
         struct sockaddr_in addr;
@@ -177,6 +173,7 @@ static void close_client(struct client_state *cs, struct ctx_server *ctx, int i)
        ctx->fds[i + 1].fd = -1;
        ctx->fds[i + 1].events = 0;
        ctx->fds[i + 1].revents = 0;
+       ctx->clients[i].fd = -1;
 }
 
 static int handle_client_event(struct ctx_server *ctx, int i)
