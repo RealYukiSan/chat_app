@@ -38,12 +38,28 @@ static int create_server()
 	return fd;
 }
 
+static void start_event_loop(int fd)
+{
+	void *tmp;
+	struct sockaddr_in addr;
+	socklen_t addr_len = sizeof(addr);
+
+	while (1) {
+		accept(fd, (struct sockaddr *)&addr, &addr_len);
+		
+		printf("Client connected\n");
+	}
+}
+
 int main(void)
 {
 	int socket_fd;
 	socket_fd = create_server();
 	if (socket_fd < 0)
 		return -1;
+
+	start_event_loop(socket_fd);
+	close(socket_fd);
 
 	return 0;
 }
