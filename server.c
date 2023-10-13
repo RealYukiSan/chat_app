@@ -40,7 +40,6 @@ static int create_server()
 
 static void start_event_loop(int fd)
 {
-	void *tmp;
 	struct sockaddr_in addr;
 	socklen_t addr_len = sizeof(addr);
 
