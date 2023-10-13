@@ -11,12 +11,29 @@
 ### A few note
 
 - sock_stream sock_dgram sock_raw is a part of network socket types
-- use netstat to see network connection statistic, like used port
 - setiap protokol seperti (IP_ICMP) mempunyai struktur data, fungsionalitas dan usecase masing-masing
 - man 2 untuk syscall, man 3 untuk library, lihat lengkapnya pada command `man man`
 - endian = akhiran dari bytes di memory (?)
 - network always use big endian
-- using raw tcp client: nc program
+
+### Useful tools and technique
+- raw tcp client: nc program
+- strace to debug syscall
+- netstat to see network connection statistic, e.g list used port
+- manage process in a single terminal session:
+  - monitoring process
+    - use command `jobs` to list related information
+  - maintain process
+    - use `command &` = move process to background
+    - use command `fg` = move process to foreground
+    - use command `bg` = move process to background, re-run freezed program
+
+```shell
+^C interrupt, this signal can be adjusted according to the way program is programmed
+^Z stop / freeze program
+^D EOF
+```
+see `man sigaction` for more info
 
 ### New update
 
@@ -35,8 +52,8 @@ auto flush occurs when: new line/lf, get input: `fgets` | `getchar` | `etc...`, 
 
 here's some example:
 ```c
-printf("> "); // by default line-buffered
-fflush(stdout); // force flush fix the issue if the auto flush not performed
+printf("> "); // by default line-buffered, so you need to add \n to automatic trigger flush
+fflush(stdout); // or force flush fix the issue if the auto flush not performed
 while (1);
 ```
 
@@ -52,7 +69,7 @@ image from: [What does "address space" means when talking about IO devices?](htt
 ### A few terms to note:
 - buffer: some data that was held somewhere in memory
 - I/O stream<sup>[1](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c)</sup>: wide-terms for represents an input source or an output destination (?)
-- flush: clear buffer and stream it to the specified FD
+- flush: clear buffer and stream it to the specified FD, e.g `printf` tidak akan ditampilkan jika belum di-flush ke stdout dan masih disimpan dalam bentuk buffer
 - buffering mode on stream<sup>[1](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c)</sup>: there's three types of buffering mode, unbuffered, line-buffered, and fullbuffered, each of mode have predefined constant in macro: `_IONBF`, `_IOLBF`, and `_IOFBF` respectively, see [`man setvbuf`](https://t.me/GNUWeeb/840558) for the details of the behaviour
 - also `struct FILE *` is refer to stream and [doesn't literally to the actual file](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c#:~:text=does%20NOT%20point%20to%20the%20actual%20file)
 - There's high-level and low-level interface<sup>[2](https://stackoverflow.com/questions/15102992/what-is-the-difference-between-stdin-and-stdin-fileno#:~:text=67-,The%20interface,-.%20Like%20everyone%20else)</sup>:
