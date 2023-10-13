@@ -1,3 +1,7 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -17,6 +21,9 @@ static int create_server()
 		return -1;
 	}
 
+	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+	setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int));
+
 	memset(&addr, 0, sizeof(addr));
 	inet_pton(AF_INET, server_addr, &addr.sin_addr);
 	addr.sin_family = AF_INET;
@@ -28,7 +35,7 @@ static int create_server()
 		return -1;
 	}
 
-	if (listen(fd, 10) < 0) {
+	if (listen(fd, 2) < 0) {
 		perror("listen");
 		close(fd);
 		return -1;
@@ -41,12 +48,33 @@ static int create_server()
 static void start_event_loop(int fd)
 {
 	struct sockaddr_in addr;
+	int client_fd;
+	char buf[5];
 	socklen_t addr_len = sizeof(addr);
 
 	while (1) {
-		accept(fd, (struct sockaddr *)&addr, &addr_len);
-		
+		client_fd = accept(fd, (struct sockaddr *)&addr, &addr_len);
+
+		if (client_fd < 0) {
+			perror("accept");
+			break;
+		}
+
 		printf("Client connected\n");
+
+		if (recv(client_fd, buf, 5, 0) < 0) {
+			perror("recv");
+			break;
+		}
+
+		printf("%s", buf);
+		fflush(stdout);
+
+		/**
+		 * since the current communication was simplex, it was made into a single-session
+		 * so the next incoming request from the client will be handled by the server.
+		*/
+		close(client_fd);
 	}
 }
 
