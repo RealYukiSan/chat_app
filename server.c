@@ -2,11 +2,13 @@
 #define _GNU_SOURCE
 #endif
 
-#include <unistd.h>
 #include <sys/socket.h>
+#include <sys/poll.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "util.h"
 
@@ -15,7 +17,7 @@ static int create_server()
 	int fd;
 	struct sockaddr_in addr;
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
+	fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (fd < 0) {
 		perror("socket");
 		return -1;
@@ -48,34 +50,61 @@ static int create_server()
 static void start_event_loop(int fd)
 {
 	struct sockaddr_in addr;
-	int client_fd;
+	struct pollfd *fds;
+	int client_fd = -1;
+	int ret;
 	char buf[5];
 	socklen_t addr_len = sizeof(addr);
 
-	while (1) {
-		client_fd = accept(fd, (struct sockaddr *)&addr, &addr_len);
-
-		if (client_fd < 0) {
-			perror("accept");
-			break;
-		}
-
-		printf("Client connected\n");
-
-		if (recv(client_fd, buf, 5, 0) < 0) {
-			perror("recv");
-			break;
-		}
-
-		printf("%s", buf);
-		fflush(stdout);
-
-		/**
-		 * since the current communication was simplex, it was made into a single-session
-		 * so the next incoming request from the client will be handled by the server.
-		*/
-		close(client_fd);
+	fds = calloc(2, sizeof(*fds));
+	if (!fds) {
+		perror("calloc");
+		return;
 	}
+
+	fds[0].fd = fd;
+	fds[0].events = POLLIN;
+
+	fds[1].fd = client_fd;
+	fds[1].events = POLLIN;
+
+	while (1) {
+		if (poll(fds, 2, -1) < 0) {
+			perror("poll");
+			break;
+		}
+
+		if (fds[0].revents & POLLIN) {
+			client_fd = accept(fd, (struct sockaddr *)&addr, &addr_len);
+			if (client_fd < 0) {
+				perror("accept");
+				break;
+			}
+
+			fds[1].fd = client_fd;
+			printf("New client connected\n");
+		}
+
+		if (fds[1].revents & POLLIN) {
+			ret = recv(fds[1].fd, buf, 5, 0);
+			if (ret < 0) {
+				perror("recv");
+				break;
+			}
+
+			if (ret == 0) {
+				printf("Client disconnected\n");
+				close(fds[1].fd);
+				continue;
+			}
+
+			printf("%s", buf);
+			fflush(stdout);
+		}
+	}
+
+	close(client_fd);
+	free(fds);
 }
 
 int main(void)
