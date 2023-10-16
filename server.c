@@ -63,11 +63,27 @@ static int create_server()
 	return fd;
 }
 
+static int accept_new_connection(struct server_ctx *srv_ctx)
+{
+	struct client_state cl_state;
+	socklen_t addr_len = sizeof(cl_state.addr);
+	int fd;
+	
+	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&cl_state.addr, &addr_len);
+	if (fd < 0) {
+		perror("accept");
+		return -1;
+	}
+
+	srv_ctx->fds[1].fd = fd;
+	printf("New client connected\n");
+
+	return 0;
+}
+
 static void start_event_loop(struct server_ctx *srv_ctx)
 {
 	int ret;
-	struct client_state cl_state;
-	socklen_t addr_len = sizeof(cl_state.addr);
 	char buf[5];
 
 	while (1) {
@@ -77,14 +93,9 @@ static void start_event_loop(struct server_ctx *srv_ctx)
 		}
 
 		if (srv_ctx->fds[0].revents & POLLIN) {
-			cl_state.fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&cl_state.addr, &addr_len);
-			if (cl_state.fd < 0) {
-				perror("accept");
+			if (accept_new_connection(srv_ctx) < 0) {
 				break;
 			}
-
-			srv_ctx->fds[1].fd = cl_state.fd;
-			printf("New client connected\n");
 		}
 
 		if (srv_ctx->fds[1].revents & POLLIN) {
@@ -118,21 +129,21 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 		return -1;
 	}
 	
+	srv_ctx->clients = calloc(NR_CLIENT, sizeof(*srv_ctx->clients));
+	if (!srv_ctx->clients) {
+		perror("calloc");
+		return -1;
+	}
+
 	srv_ctx->fds[0].fd = srv_ctx->tcp_fd;
 	srv_ctx->fds[0].events = POLLIN;
 	srv_ctx->fds[0].revents = 0;
 
-	for (size_t i = 1; i <= NR_CLIENT; i++) {
-		srv_ctx->fds[i].events = POLLIN;
-		srv_ctx->fds[i].revents = 0;
+	for (size_t i = 1; i <= NR_CLIENT; i++)
 		srv_ctx->fds[i].fd = -1;
-	}
 
-	srv_ctx->clients = calloc(NR_CLIENT, sizeof(*srv_ctx->clients));
-	if (!srv_ctx->clients) {
-		perror("malloc");
-		return -1;
-	}
+	for (size_t i = 1; i < NR_CLIENT; i++)
+		srv_ctx->clients[i].fd = -1;
 
 	return 0;	
 }
