@@ -11,6 +11,22 @@
 #include <stdlib.h>
 
 #include "util.h"
+#include "packet.h"
+
+#define NR_CLIENT 2
+
+struct client_state {
+	int 			fd;
+	struct sockaddr_in 	addr;
+	size_t			recv_len;
+	struct packet 		pkt;
+};
+
+struct server_ctx {
+	int 			tcp_fd;
+	struct pollfd		*fds;
+	struct client_state	*clients;
+};
 
 static int create_server()
 {
@@ -47,46 +63,32 @@ static int create_server()
 	return fd;
 }
 
-static void start_event_loop(int fd)
+static void start_event_loop(struct server_ctx *srv_ctx)
 {
-	struct sockaddr_in addr;
-	struct pollfd *fds;
-	int client_fd = -1;
 	int ret;
+	struct client_state cl_state;
+	socklen_t addr_len = sizeof(cl_state.addr);
 	char buf[5];
-	socklen_t addr_len = sizeof(addr);
-
-	fds = calloc(2, sizeof(*fds));
-	if (!fds) {
-		perror("calloc");
-		return;
-	}
-
-	fds[0].fd = fd;
-	fds[0].events = POLLIN;
-
-	fds[1].fd = client_fd;
-	fds[1].events = POLLIN;
 
 	while (1) {
-		if (poll(fds, 2, -1) < 0) {
+		if (poll(srv_ctx->fds, 2, -1) < 0) {
 			perror("poll");
 			break;
 		}
 
-		if (fds[0].revents & POLLIN) {
-			client_fd = accept(fd, (struct sockaddr *)&addr, &addr_len);
-			if (client_fd < 0) {
+		if (srv_ctx->fds[0].revents & POLLIN) {
+			cl_state.fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&cl_state.addr, &addr_len);
+			if (cl_state.fd < 0) {
 				perror("accept");
 				break;
 			}
 
-			fds[1].fd = client_fd;
+			srv_ctx->fds[1].fd = cl_state.fd;
 			printf("New client connected\n");
 		}
 
-		if (fds[1].revents & POLLIN) {
-			ret = recv(fds[1].fd, buf, 5, 0);
+		if (srv_ctx->fds[1].revents & POLLIN) {
+			ret = recv(srv_ctx->fds[1].fd, buf, 5, 0);
 			if (ret < 0) {
 				perror("recv");
 				break;
@@ -94,7 +96,7 @@ static void start_event_loop(int fd)
 
 			if (ret == 0) {
 				printf("Client disconnected\n");
-				close(fds[1].fd);
+				close(srv_ctx->fds[1].fd);
 				continue;
 			}
 
@@ -102,20 +104,56 @@ static void start_event_loop(int fd)
 			fflush(stdout);
 		}
 	}
+}
 
-	close(client_fd);
-	free(fds);
+static int initialize_ctx(struct server_ctx *srv_ctx)
+{
+	srv_ctx->tcp_fd = create_server();
+	if (srv_ctx->tcp_fd < 0)
+		return -1;
+
+	srv_ctx->fds = calloc(NR_CLIENT + 1, sizeof(*srv_ctx->fds));
+	if (!srv_ctx->fds) {
+		perror("calloc");
+		return -1;
+	}
+	
+	srv_ctx->fds[0].fd = srv_ctx->tcp_fd;
+	srv_ctx->fds[0].events = POLLIN;
+	srv_ctx->fds[0].revents = 0;
+
+	for (size_t i = 1; i <= NR_CLIENT; i++) {
+		srv_ctx->fds[i].events = POLLIN;
+		srv_ctx->fds[i].revents = 0;
+		srv_ctx->fds[i].fd = -1;
+	}
+
+	srv_ctx->clients = malloc(sizeof(*srv_ctx->clients) * NR_CLIENT);
+	if (!srv_ctx->clients) {
+		perror("malloc");
+		return -1;
+	}
+
+	return 0;	
+}
+
+static void clean_ctx(struct server_ctx *srv_ctx)
+{
+	free(srv_ctx->fds);
+	free(srv_ctx->clients);
+	close(srv_ctx->tcp_fd);
 }
 
 int main(void)
 {
-	int socket_fd;
-	socket_fd = create_server();
-	if (socket_fd < 0)
-		return -1;
+	struct server_ctx srv_ctx;
 
-	start_event_loop(socket_fd);
-	close(socket_fd);
+	if (initialize_ctx(&srv_ctx) < 0) {
+		return -1;
+	}
+	
+	start_event_loop(&srv_ctx);
+	clean_ctx(&srv_ctx);
 
 	return 0;
 }
