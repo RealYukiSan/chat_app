@@ -53,7 +53,7 @@ static int create_server()
 		return -1;
 	}
 
-	if (listen(fd, 2) < 0) {
+	if (listen(fd, NR_CLIENT) < 0) {
 		perror("listen");
 		close(fd);
 		return -1;
@@ -71,7 +71,7 @@ static void start_event_loop(struct server_ctx *srv_ctx)
 	char buf[5];
 
 	while (1) {
-		if (poll(srv_ctx->fds, 2, -1) < 0) {
+		if (poll(srv_ctx->fds, NR_CLIENT, -1) < 0) {
 			perror("poll");
 			break;
 		}
@@ -128,7 +128,7 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 		srv_ctx->fds[i].fd = -1;
 	}
 
-	srv_ctx->clients = malloc(sizeof(*srv_ctx->clients) * NR_CLIENT);
+	srv_ctx->clients = calloc(NR_CLIENT, sizeof(*srv_ctx->clients));
 	if (!srv_ctx->clients) {
 		perror("malloc");
 		return -1;
