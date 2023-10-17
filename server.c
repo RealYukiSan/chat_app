@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #endif
 
+#include <errno.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
 #include <arpa/inet.h>
@@ -87,7 +88,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 
 	port = ntohs(addr.sin_port);
 	inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
-	printf("New client connected from %s:%d\n", addr_str, port);	
+	printf("New client connected from %s:%d\n", addr_str, port);
 	
 	return 0;
 }
@@ -100,7 +101,12 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	int fd;
 	
 	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&addr, &addr_len);
+
 	if (fd < 0) {
+		int ret = errno;
+		if (ret == EINTR || ret == EAGAIN)
+			return 0;
+
 		perror("accept");
 		return -1;
 	}
@@ -113,39 +119,58 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
-static void start_event_loop(struct server_ctx *srv_ctx)
+static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 {
 	int ret;
 	char buf[5];
 
-	while (1) {
-		if (poll(srv_ctx->fds, NR_CLIENT, -1) < 0) {
-			perror("poll");
+	if (srv_ctx->fds[0].revents & POLLIN) {
+		if (accept_new_connection(srv_ctx) < 0)
+			return -1;
+
+		nr_event--;
+	}
+
+	for (size_t i = 1; i <= NR_CLIENT; i++) {
+		if (nr_event == 0)
 			break;
-		}
 
-		if (srv_ctx->fds[0].revents & POLLIN) {
-			if (accept_new_connection(srv_ctx) < 0) {
-				break;
-			}
-		}
-
-		if (srv_ctx->fds[1].revents & POLLIN) {
-			ret = recv(srv_ctx->fds[1].fd, buf, 5, 0);
+		if (srv_ctx->fds[i].revents & POLLIN) {
+			ret = recv(srv_ctx->fds[i].fd, buf, 5, 0);
 			if (ret < 0) {
 				perror("recv");
-				break;
+				return -1;
 			}
 
 			if (ret == 0) {
 				printf("Client disconnected\n");
-				close(srv_ctx->fds[1].fd);
-				continue;
+				close(srv_ctx->fds[i].fd);
+				return 0;
 			}
 
 			printf("%s", buf);
 			fflush(stdout);
+			nr_event--;
 		}
+	}
+
+	return 0;	
+}
+
+static void start_event_loop(struct server_ctx *srv_ctx)
+{
+	int ret;
+
+	while (1) {
+		ret = poll(srv_ctx->fds, NR_CLIENT, -1);
+
+		if (ret < 0) {
+			perror("poll");
+			break;
+		}
+
+		if (handle_events(srv_ctx, ret) < 0)
+			break;
 	}
 }
 
@@ -174,7 +199,7 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 	for (size_t i = 1; i <= NR_CLIENT; i++)
 		srv_ctx->fds[i].fd = -1;
 
-	for (size_t i = 1; i < NR_CLIENT; i++)
+	for (size_t i = 0; i < NR_CLIENT; i++)
 		srv_ctx->clients[i].fd = -1;
 
 	return 0;	
