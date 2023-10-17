@@ -63,20 +63,52 @@ static int create_server()
 	return fd;
 }
 
+static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_ctx)
+{
+	struct client_state *cs = NULL;
+	char addr_str[INET_ADDRSTRLEN];
+	uint16_t port;
+	uint32_t i;
+
+	for (i = 0; i < NR_CLIENT; i++) {
+		if (srv_ctx->clients[i].fd < 0) {
+			cs = &srv_ctx->clients[i];
+			break;
+		}
+	}
+
+	if (!cs)
+		return -1;
+	
+	cs->fd = fd;
+	cs->addr = addr;
+	srv_ctx->fds[i + 1].fd = fd;
+	srv_ctx->fds[i + 1].events = POLLIN;
+
+	port = ntohs(addr.sin_port);
+	inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
+	printf("New client connected from %s:%d\n", addr_str, port);	
+	
+	return 0;
+}
+
 static int accept_new_connection(struct server_ctx *srv_ctx)
 {
 	struct client_state cl_state;
+	struct sockaddr_in addr;
 	socklen_t addr_len = sizeof(cl_state.addr);
 	int fd;
 	
-	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&cl_state.addr, &addr_len);
+	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&addr, &addr_len);
 	if (fd < 0) {
 		perror("accept");
 		return -1;
 	}
 
-	srv_ctx->fds[1].fd = fd;
-	printf("New client connected\n");
+	if (plug_client(fd, addr, srv_ctx) < 0) {
+		printf("Client slot is full, dropping a new connection...\n");
+		close(fd);
+	}
 
 	return 0;
 }
