@@ -145,6 +145,8 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 			if (ret == 0) {
 				printf("Client disconnected\n");
 				close(srv_ctx->fds[i].fd);
+				srv_ctx->fds[i].fd = -1;
+				srv_ctx->clients[i - 1].fd = -1;
 				return 0;
 			}
 
