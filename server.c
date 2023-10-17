@@ -150,8 +150,28 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 				return 0;
 			}
 
-			printf("%s", buf);
-			fflush(stdout);
+			int len = strlen(buf);
+			if (buf[len - 1] == '\n') {
+				buf[len - 1] = '\0';
+			}
+
+			/**
+			 * A weirdo occurance happened here!
+			 * why printf function look like called twice?
+			 * see the links below as a reference
+			 * keyword: printf call syscall write twice
+			 * https://stackoverflow.com/questions/27440739/why-printf-plays-twice
+			 * keyword: does unhandled data on scanf stored into stdin?
+			 * thus making scanf skipped cuz stdin already consumed in scanf?
+			 * https://stackoverflow.com/questions/5240789/scanf-leaves-the-newline-character-in-the-buffer
+			 * 
+			 * https://stackoverflow.com/questions/5240789/scanf-leaves-the-newline-character-in-the-buffer#:~:text=if%20you%20want%20to%20skip%20a%20newline%20from%20the%20previous%20line
+			 * https://stackoverflow.com/questions/5240789/scanf-leaves-the-newline-character-in-the-buffer#:~:text=are%20the%203%20specified%20expectations%20that%20do%20not%20consume%20leading%20whitespace.
+			 * 
+			 * https://stackoverflow.com/questions/13993742/is-there-any-way-to-peek-at-the-stdin-buffer
+			 * 
+			*/
+			printf("%s\n", buf);
 			nr_event--;
 		}
 	}
