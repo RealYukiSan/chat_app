@@ -10,10 +10,10 @@
 #define MAX_SIZE_MSG 4096
 
 enum {
-	CL_PKT_MSG_ID = 10,
+	CL_PKT_MSG = 10,
 	CL_PKT_JOIN = 11,
 
-	SR_PKT_MSG = 20,
+	SR_PKT_MSG_id = 20,
 	SR_PKT_JOIN = 21,
 };
 
