@@ -50,7 +50,7 @@ static int connect_server()
 	return fd;
 }
 
-static int handle_input(struct client_ctx *cl_ctx)
+static int handle_user_input(struct client_ctx *cl_ctx)
 {
 	/**
 	 * TODO:
@@ -63,9 +63,20 @@ static int handle_input(struct client_ctx *cl_ctx)
 	if (!fgets(cl_ctx->msg, sizeof(cl_ctx->msg), stdin))
 		return -1;
 
-	printf("%s", cl_ctx->msg);
-	cl_ctx->need_reload_prompt = true;
+	int len = strlen(cl_ctx->msg);
+	if (cl_ctx->msg[len - 1] == '\n')
+		cl_ctx->msg[len - 1] = '\0';
 
+	if (!strcmp(cl_ctx->msg, "exit")) {
+		return -1;
+	}
+
+	if (!strcmp(cl_ctx->msg, "clear")) {
+		printf("\ec");
+		fflush(stdout);
+	}
+	
+	cl_ctx->need_reload_prompt = true;
 	return 0;
 }
 
@@ -81,7 +92,8 @@ static int handle_events(struct client_ctx *cl_ctx)
 	}
 
 	if (cl_ctx->fds[1].revents & POLLIN) {
-		handle_input(cl_ctx);
+		if (handle_user_input(cl_ctx) < 0)
+			return -1;
 	}
 
 	return 0;	
@@ -105,7 +117,8 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 			break;
 		}
 
-		handle_events(cl_ctx);
+		if (handle_events(cl_ctx) < 0)
+			break;
 	}
 }
 
