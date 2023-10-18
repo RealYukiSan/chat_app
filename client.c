@@ -4,12 +4,24 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "util.h"
+#include "packet.h"
 
 struct client_ctx {
+	/* tcp sockstream FD */
 	int 		tcp_fd;
-	struct pollfd 	*fds;
+	/* contain `STDIN_FILENO` and sockstream FD */
+	struct pollfd 	fds[2];
+	/* packet used as protocol to communicate in tcp network */
+	struct packet	pkt;
+	/* keep track the packet */
+	size_t		recv_len;
+	/* contain the data received from fgets func */
+	char		msg[MAX_SIZE_MSG];
+	/* implment DRY principle with this member */
+	bool		need_reload_prompt;
 };
 
 static int connect_server()
@@ -46,7 +58,7 @@ static start_event_loop(struct client_ctx *cl_ctx)
 	 * 	mengirim pesan ke server
 	 * 	menerima pesan dari server
 	 * 	setelah menerima:
-	 * 		- mengekstra pesan dengan cara yang benar
+	 * 		- transform format/mengekstra pesan dengan cara yang benar
 	 * 		- menampilkan pesan yang telah terekstrak
 	*/
 }
