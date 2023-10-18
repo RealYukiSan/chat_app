@@ -7,8 +7,10 @@
 #define __packed __attribute__((__packed__))
 #endif
 
+#define MAX_SIZE_MSG 4096
+
 enum {
-	CL_PKT_MSG = 10,
+	CL_PKT_MSG_ID = 10,
 	CL_PKT_JOIN = 11,
 
 	SR_PKT_MSG = 20,
@@ -17,7 +19,12 @@ enum {
 
 struct packet_msg {
 	uint16_t	len;
-	char		msg[];
+	char		data[];
+} __packed;
+
+struct packet_msg_id {
+	char			identity[INET_ADDRSTRLEN];
+	struct packet_msg 	msg;
 } __packed;
 
 
@@ -26,8 +33,11 @@ struct packet {
 	uint8_t	 	__pad;
 	uint16_t	len;
 	union {
-		struct packet_msg	msg;
-		char			__raw_buf[4096];
+		/* broadcast data from server to clients */
+		struct packet_msg_id	msg_id;
+		/* send data from client to server */
+		struct packet_msg 	msg;
+		char			__raw_buf[4096 + MAX_SIZE_MSG];
 	};	
 };
 
