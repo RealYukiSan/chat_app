@@ -48,7 +48,7 @@ static int connect_server()
 	return fd;
 }
 
-static start_event_loop(struct client_ctx *cl_ctx)
+static void start_event_loop(struct client_ctx *cl_ctx)
 {
 	/**
 	 * TODO:
@@ -63,13 +63,23 @@ static start_event_loop(struct client_ctx *cl_ctx)
 	*/
 }
 
+static int initialize_ctx(struct client_ctx *cl_ctx)
+{
+	cl_ctx->tcp_fd = connect_server();
+	if (cl_ctx->tcp_fd < 0)
+		return -1;
+
+	cl_ctx->fds[0].fd = cl_ctx->tcp_fd;
+	cl_ctx->fds[0].events = POLLIN;
+
+	cl_ctx->fds[1].fd = stdin;
+	cl_ctx->fds[1].events = POLLIN;
+}
+
 int main(void)
 {
 	struct client_ctx cl_ctx;
-
-	cl_ctx.tcp_fd = connect_server();
-	if (cl_ctx.tcp_fd < 0)
-		return -1;
+	initialize_ctx(&cl_ctx);
 	
 	return 0;
 }
