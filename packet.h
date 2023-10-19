@@ -8,6 +8,7 @@
 #endif
 
 #define MAX_SIZE_MSG 4096
+#define HEADER_SIZE 4
 
 enum {
 	CL_PKT_MSG = 10,

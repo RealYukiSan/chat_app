@@ -50,7 +50,26 @@ static int connect_server()
 	return fd;
 }
 
-static int process_user_input(struct client_ctx *cl_ctx)
+static int send_message(struct client_ctx *cl_ctx, size_t len)
+{
+	struct packet *pkt;
+	int body_len;
+
+	body_len = sizeof(pkt->msg) + len;
+
+	pkt = &cl_ctx->pkt;
+	pkt->type = CL_PKT_MSG;
+	pkt->msg.len = htons(len);
+	pkt->len = htons(HEADER_SIZE + body_len);
+	
+	strcpy(pkt->msg.data, cl_ctx->msg);
+
+	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
+
+	return 0;
+}
+
+static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 {
 	if (!strcmp(cl_ctx->msg, "exit")) {
 		return -1;
@@ -60,6 +79,8 @@ static int process_user_input(struct client_ctx *cl_ctx)
 		printf("\ec");
 		fflush(stdout);
 	}
+
+	send_message(cl_ctx, len);
 	
 	return 0;
 }
@@ -74,14 +95,16 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 	 * 	mengirim pesan ke server
 	*/
 
+	size_t len;
+
 	if (!fgets(cl_ctx->msg, sizeof(cl_ctx->msg), stdin))
 		return -1;
 
-	int len = strlen(cl_ctx->msg);
+	len = strlen(cl_ctx->msg);
 	if (cl_ctx->msg[len - 1] == '\n')
 		cl_ctx->msg[len - 1] = '\0';
 
-	process_user_input(cl_ctx);
+	process_user_input(cl_ctx, len);
 	
 	cl_ctx->need_reload_prompt = true;
 	return 0;
