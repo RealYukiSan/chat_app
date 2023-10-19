@@ -19,7 +19,6 @@
 struct client_state {
 	int 			fd;
 	struct sockaddr_in 	addr;
-	size_t			recv_len;
 	struct packet 		pkt;
 };
 
@@ -143,7 +142,7 @@ static int handle_event(struct server_ctx *srv_ctx, int i)
 	/* raw buffer of packet struct */
 	char *buf;
 
-	buf = (char *)&cs->pkt + cs->recv_len;
+	buf = (char *)&cs->pkt;
 	ret = recv(cs->fd, buf, sizeof(cs->pkt), MSG_DONTWAIT);
 	if (ret < 0) {
 		if (ret == EAGAIN || ret == EINTR)
@@ -161,7 +160,6 @@ static int handle_event(struct server_ctx *srv_ctx, int i)
 		return 0;
 	}
 
-	cs->recv_len += (size_t)ret;
 	process_cl_pkt(cs, srv_ctx);
 
 	return 0;
