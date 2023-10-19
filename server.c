@@ -135,10 +135,10 @@ static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
 	return 0;
 }
 
-static int handle_event(struct server_ctx *srv_ctx, int i)
+static int handle_event(struct server_ctx *srv_ctx, int id_client)
 {
 	ssize_t ret;
-	struct client_state *cs = &srv_ctx->clients[i];
+	struct client_state *cs = &srv_ctx->clients[id_client];
 	/* raw buffer of packet struct */
 	char *buf;
 
@@ -154,9 +154,9 @@ static int handle_event(struct server_ctx *srv_ctx, int i)
 
 	if (ret == 0) {
 		printf("Client disconnected\n");
-		close(srv_ctx->fds[i].fd);
-		srv_ctx->fds[i].fd = -1;
-		srv_ctx->clients[i - 1].fd = -1;
+		close(srv_ctx->fds[id_client + 1].fd);
+		srv_ctx->fds[id_client + 1].fd = -1;
+		srv_ctx->clients[id_client].fd = -1;
 		return 0;
 	}
 
@@ -192,7 +192,7 @@ static void start_event_loop(struct server_ctx *srv_ctx)
 	int ret;
 
 	while (1) {
-		ret = poll(srv_ctx->fds, NR_CLIENT, -1);
+		ret = poll(srv_ctx->fds, NR_CLIENT + 1, -1);
 
 		if (ret < 0) {
 			perror("poll");
