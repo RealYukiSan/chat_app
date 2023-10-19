@@ -121,9 +121,19 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 
 static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
 {
-	// menampilkan pesan yang ada dalam readable format
+	uint16_t port;
+	char addr_str[INET_ADDRSTRLEN];
+	
+	inet_ntop(AF_INET, &cs->addr.sin_addr, addr_str, sizeof(addr_str));
+	port = ntohs(cs->addr.sin_port);
+	
+	if (cs->pkt.type == CL_PKT_MSG)
+		printf("New message from %s:%d = %s\n", addr_str, port, cs->pkt.msg.data);
+
 	// melakukan broadcast ke client yang terhubung
 	// menyimpan pesan kedalam record yang ada di db history
+
+	return 0;
 }
 
 static int handle_event(struct server_ctx *srv_ctx, int i)
@@ -153,6 +163,8 @@ static int handle_event(struct server_ctx *srv_ctx, int i)
 
 	cs->recv_len += (size_t)ret;
 	process_cl_pkt(cs, srv_ctx);
+
+	return 0;
 }
 
 static int handle_events(struct server_ctx *srv_ctx, int nr_event)
