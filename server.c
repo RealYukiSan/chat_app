@@ -119,6 +119,23 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
+static int handle_cl_pkt_msg(struct client_state *cs)
+{
+	uint16_t port;
+	char addr_str[INET_ADDRSTRLEN];
+
+	inet_ntop(AF_INET, &cs->addr.sin_addr, addr_str, sizeof(addr_str));
+	port = ntohs(cs->addr.sin_port);
+	printf("New message from %s:%d = %s\n", addr_str, port, cs->pkt.msg.data);
+
+	/**
+	 * TODO:
+	 * 	setelah mentransform dan menampilkan pesannya:
+	 * 		- melakukan broadcast ke client yang terhubung
+	 * 		- menyimpan pesan kedalam record yang ada di db history
+	*/
+}
+
 static int process_cl_pkt(struct client_state *cs)
 {
 	size_t expected_len;
@@ -126,25 +143,14 @@ static int process_cl_pkt(struct client_state *cs)
 try_again:
 	if (cs->recv_len < HEADER_SIZE)
 		return 0;
-	
+
 	expected_len = HEADER_SIZE + ntohs(cs->pkt.len);
 	if (cs->recv_len < expected_len)
 		return 0;
-	
+
 	switch (cs->pkt.type) {
 		case CL_PKT_MSG:
-			uint16_t port;
-			char addr_str[INET_ADDRSTRLEN];
-			inet_ntop(AF_INET, &cs->addr.sin_addr, addr_str, sizeof(addr_str));
-			port = ntohs(cs->addr.sin_port);
-			printf("New message from %s:%d = %s\n", addr_str, port, cs->pkt.msg.data);
-
-			/**
-			 * TODO:
-			 * 	setelah mentransform dan menampilkan pesannya:
-			 * 		- melakukan broadcast ke client yang terhubung
-			 * 		- menyimpan pesan kedalam record yang ada di db history
-			*/
+			handle_cl_pkt_msg(cs);
 			break;
 
 		default:

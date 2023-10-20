@@ -50,7 +50,13 @@ static int connect_server()
 	return fd;
 }
 
-// simulate short recv to make sure server can handle that: https://github.com/Reyuki-san/chat_app/commit/4fa068256a113295338e340a1b87a0d24cb8111b?diff=split see https://t.me/GNUWeeb/849129 for further explanation 
+/**
+ * https://github.com/Reyuki-san/chat_app/commit/4fa068256a113295338e340a1b87a0d24cb8111b?diff=split
+ * simulate short recv to make sure the server can handle that
+ * see the below links for further explanation:
+ * https://github.com/Reyuki-san/chat_app/commit/14b61d5e062dffcfab8400f0932b32be0d0a2591
+ * https://t.me/GNUWeeb/849129
+*/
 static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
 	struct packet *pkt;
