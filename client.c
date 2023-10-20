@@ -57,8 +57,8 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	size_t size_pkt;
 
 	body_len = sizeof(double_pkt->msg) + len;
-	size_pkt = sizeof(*double_pkt);
-	double_pkt = malloc(size_pkt * 2);
+	size_pkt = HEADER_SIZE + body_len;
+	double_pkt = malloc(sizeof(*double_pkt) * 2);
 	if (!double_pkt)
 		return -1;
 
@@ -70,8 +70,8 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 		strcpy(double_pkt[i].msg.data, cl_ctx->msg);
 	}
 
-	memmove(double_pkt->__raw_buf + body_len, &double_pkt[1], HEADER_SIZE + body_len);
-	send(cl_ctx->tcp_fd, double_pkt, (HEADER_SIZE + body_len) * 2, 0);
+	memmove(double_pkt->__raw_buf + body_len, &double_pkt[1], size_pkt);
+	send(cl_ctx->tcp_fd, double_pkt, size_pkt * 2, 0);
 	free(double_pkt);
 
 	return 0;
