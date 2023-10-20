@@ -50,16 +50,17 @@ static int connect_server()
 	return fd;
 }
 
-// commit SHA: 4ebf84f5e771f581133a22ef19b141c29458737f
 static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
 	struct packet *double_pkt;
-	int body_len;
+	size_t body_len;
 	size_t size_pkt;
 
 	body_len = sizeof(double_pkt->msg) + len;
-	size_pkt = HEADER_SIZE + body_len;
+	size_pkt = sizeof(*double_pkt);
 	double_pkt = malloc(size_pkt * 2);
+	if (!double_pkt)
+		return -1;
 
 	for (size_t i = 0; i < 2; i++) {
 		double_pkt[i].type = CL_PKT_MSG;
@@ -69,30 +70,12 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 		strcpy(double_pkt[i].msg.data, cl_ctx->msg);
 	}
 
-	send(cl_ctx->tcp_fd, double_pkt, size_pkt * 2, 0);
-
+	memmove(double_pkt->__raw_buf + body_len, &double_pkt[1], HEADER_SIZE + body_len);
+	send(cl_ctx->tcp_fd, double_pkt, (HEADER_SIZE + body_len) * 2, 0);
 	free(double_pkt);
+
 	return 0;
 }
-
-// static int send_message(struct client_ctx *cl_ctx, size_t len)
-// {
-// 	struct packet *pkt;
-// 	int body_len;
-
-// 	body_len = sizeof(pkt->msg) + len;
-
-// 	pkt = &cl_ctx->pkt;
-// 	pkt->type = CL_PKT_MSG;
-// 	pkt->msg.len = htons(len);
-// 	pkt->len = htons(body_len);
-	
-// 	strcpy(pkt->msg.data, cl_ctx->msg);
-
-// 	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
-
-// 	return 0;
-// }
 
 static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 {

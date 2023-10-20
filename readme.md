@@ -13,7 +13,7 @@
 - sock_stream sock_dgram sock_raw is a part of network socket types
 - setiap protokol seperti (IP_ICMP) mempunyai struktur data, fungsionalitas dan usecase masing-masing
 - man 2 untuk syscall, man 3 untuk library, lihat lengkapnya pada command `man man`
-- endian = akhiran dari bytes di memory (?)
+- endian = bytes order, tidak digunakan untuk single byte
 - network always use big endian
 
 ### Useful tools and technique
