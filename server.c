@@ -20,6 +20,7 @@ struct client_state {
 	int 			fd;
 	struct sockaddr_in 	addr;
 	struct packet 		pkt;
+	size_t			recv_len;
 };
 
 struct server_ctx {
@@ -118,19 +119,46 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
-static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
+static int process_cl_pkt(struct client_state *cs)
 {
-	uint16_t port;
-	char addr_str[INET_ADDRSTRLEN];
-	
-	inet_ntop(AF_INET, &cs->addr.sin_addr, addr_str, sizeof(addr_str));
-	port = ntohs(cs->addr.sin_port);
-	
-	if (cs->pkt.type == CL_PKT_MSG)
-		printf("New message from %s:%d = %s\n", addr_str, port, cs->pkt.msg.data);
+	size_t expected_len;
 
-	// melakukan broadcast ke client yang terhubung
-	// menyimpan pesan kedalam record yang ada di db history
+try_again:
+	if (cs->recv_len < HEADER_SIZE)
+		return 0;
+	
+	expected_len = HEADER_SIZE + ntohs(cs->pkt.len);
+	if (cs->recv_len < expected_len)
+		return 0;
+	
+	switch (cs->pkt.type) {
+		case CL_PKT_MSG:
+			uint16_t port;
+			char addr_str[INET_ADDRSTRLEN];
+			inet_ntop(AF_INET, &cs->addr.sin_addr, addr_str, sizeof(addr_str));
+			port = ntohs(cs->addr.sin_port);
+			printf("New message from %s:%d = %s\n", addr_str, port, cs->pkt.msg.data);
+
+			/**
+			 * TODO:
+			 * 	setelah mentransform dan menampilkan pesannya:
+			 * 		- melakukan broadcast ke client yang terhubung
+			 * 		- menyimpan pesan kedalam record yang ada di db history
+			*/
+			break;
+
+		default:
+			printf("Invalid packet\n");
+			return -1;
+	}
+
+	cs->recv_len -= expected_len;
+	if (cs->recv_len > 0) {
+		char *dest = (char *)&cs->pkt;
+		char *src = dest + expected_len;
+		memmove(dest, src, cs->recv_len);
+		goto try_again;
+	}	
 
 	return 0;
 }
@@ -142,7 +170,7 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 	/* raw buffer of packet struct */
 	char *buf;
 
-	buf = (char *)&cs->pkt;
+	buf = (char *)&cs->pkt + cs->recv_len;
 	ret = recv(cs->fd, buf, sizeof(cs->pkt), MSG_DONTWAIT);
 	if (ret < 0) {
 		if (ret == EAGAIN || ret == EINTR)
@@ -160,7 +188,8 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 		return 0;
 	}
 
-	process_cl_pkt(cs, srv_ctx);
+	cs->recv_len += ret;
+	process_cl_pkt(cs);
 
 	return 0;
 }

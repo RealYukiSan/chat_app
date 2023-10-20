@@ -83,3 +83,13 @@ image from: [What does "address space" means when talking about IO devices?](htt
   - some event on a file descriptor: documented on [`man 2 poll`](https://man7.org/linux/man-pages/man2/poll.2.html)
 - epoll linux | queu bsd | iocp windows
 - io_uring linux
+
+### writeup: my internal dialogue with myself
+note: I want someone who reads this to validate and verify my statement, so feel free to open a pull request if you discover any misconcept, misinterpretation, or misleading information
+
+- usually in the network domain, we often use dynamic allocated variable to hold flexible array, cuz it will be very wasteful if the variable are fixed-size since it will force the size to be fixed even if the data is small, and fill the rest with null char as a padding (?)
+- on the network, you are passing the actual value or data, not the reference of memory address XD
+- why always passing the size as additional information in the member struct? I think it's like a trade-off.
+  - maybe the analogy is more or less like, Why bother to execute a bunch of instructions instead of passing additional information that is not so large (does this mean for the sake of efficiency?)
+- sizeof means the size of a defined data structure on a variable, not the size of the variable's value itself. Why? You might ask, That's how data structure and memory work (?)
+  - and not to confuse with strlen, which only applied to strings in order to count the amount of char.
