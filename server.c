@@ -119,7 +119,39 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
-static int handle_cl_pkt_msg(struct client_state *cs)
+static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, char addr_str[INET_ADDRSTRLEN])
+{
+	struct packet *pkt;
+	struct packet_msg_id *msg_id;
+	size_t body_len;
+
+	pkt = malloc(sizeof(*pkt));
+	if (!pkt) {
+		perror("malloc");
+		return -1;
+	}
+
+	msg_id = &pkt->msg_id;
+	body_len = sizeof(cs->pkt.msg) + htons(cs->pkt.msg.len);
+	pkt->type = SR_PKT_MSG_ID;
+	pkt->len = cs->pkt.len;
+	memcpy(&msg_id->msg, &cs->pkt.msg, body_len);
+	strcpy(msg_id->identity, addr_str);
+
+	printf("%s\n", msg_id->msg.data);
+
+	for (size_t i = 0; i < NR_CLIENT; i++) {
+		if (srv_ctx->clients[i].fd != -1) {
+			send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0);
+		}
+	}
+
+	free(pkt);
+	
+	return 0;
+}
+
+static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 {
 	uint16_t port;
 	char addr_str[INET_ADDRSTRLEN];
@@ -134,9 +166,13 @@ static int handle_cl_pkt_msg(struct client_state *cs)
 	 * 		- melakukan broadcast ke client yang terhubung
 	 * 		- menyimpan pesan kedalam record yang ada di db history
 	*/
+	if (broadcast_msg(cs, srv_ctx, addr_str) < 0)
+		return -1;
+
+	return 0;
 }
 
-static int process_cl_pkt(struct client_state *cs)
+static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
 {
 	size_t expected_len;
 
@@ -150,7 +186,7 @@ try_again:
 
 	switch (cs->pkt.type) {
 		case CL_PKT_MSG:
-			handle_cl_pkt_msg(cs);
+			handle_cl_pkt_msg(cs, srv_ctx);
 			break;
 
 		default:
@@ -195,7 +231,7 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 	}
 
 	cs->recv_len += ret;
-	process_cl_pkt(cs);
+	process_cl_pkt(cs, srv_ctx);
 
 	return 0;
 }
