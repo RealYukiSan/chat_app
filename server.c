@@ -119,7 +119,16 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
-static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, char addr_str[INET_ADDRSTRLEN])
+
+static const char *stringify_ipv4(struct sockaddr_in *addr)
+{
+	static char buf[IP4_IDENTITY_SIZE];
+	inet_ntop(AF_INET, &addr->sin_addr, buf, INET_ADDRSTRLEN);
+	sprintf(buf + strlen(buf), ":%hu", ntohs(addr->sin_port));
+	return buf;
+}
+
+static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 {
 	struct packet *pkt;
 	struct packet_msg_id *msg_id;
@@ -139,9 +148,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, ch
 	pkt->len = htons(body_len);
 	msg_id->msg.len = cs->pkt.msg.len;
 	memcpy(&msg_id->msg.data, &cs->pkt.msg.data, msg_len);
-	strcpy(msg_id->identity, addr_str);
-
-	printf("%s: %s\n", msg_id->identity, msg_id->msg.data);
+	memcpy(&msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (srv_ctx->clients[i].fd != -1) {
@@ -156,12 +163,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, ch
 
 static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 {
-	uint16_t port;
-	char addr_str[INET_ADDRSTRLEN];
-
-	inet_ntop(AF_INET, &cs->addr.sin_addr, addr_str, sizeof(addr_str));
-	port = ntohs(cs->addr.sin_port);
-	printf("New message from %s:%d = %s\n", addr_str, port, cs->pkt.msg.data);
+	printf("New message from %s = %s\n", stringify_ipv4(&cs->addr), cs->pkt.msg.data);
 
 	/**
 	 * TODO:
@@ -169,7 +171,7 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	 * 		- melakukan broadcast ke client yang terhubung
 	 * 		- menyimpan pesan kedalam record yang ada di db history
 	*/
-	if (broadcast_msg(cs, srv_ctx, addr_str) < 0)
+	if (broadcast_msg(cs, srv_ctx) < 0)
 		return -1;
 
 	return 0;

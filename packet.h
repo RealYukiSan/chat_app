@@ -9,6 +9,7 @@
 
 #define MAX_SIZE_MSG 4096
 #define HEADER_SIZE 4
+#define IP4_IDENTITY_SIZE INET_ADDRSTRLEN + sizeof(":65535")
 
 enum {
 	CL_PKT_MSG = 10,
@@ -24,7 +25,7 @@ struct packet_msg {
 } __packed;
 
 struct packet_msg_id {
-	char			identity[INET_ADDRSTRLEN];
+	char			identity[IP4_IDENTITY_SIZE];
 	struct packet_msg 	msg;
 } __packed;
 
