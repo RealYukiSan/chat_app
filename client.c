@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdlib.h>
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -50,24 +50,49 @@ static int connect_server()
 	return fd;
 }
 
+// commit SHA: X
 static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
-	struct packet *pkt;
+	struct packet *double_pkt;
 	int body_len;
+	size_t size_pkt;
 
-	body_len = sizeof(pkt->msg) + len;
+	body_len = sizeof(double_pkt->msg) + len;
+	size_pkt = HEADER_SIZE + body_len;
+	double_pkt = malloc(size_pkt * 2);
 
-	pkt = &cl_ctx->pkt;
-	pkt->type = CL_PKT_MSG;
-	pkt->msg.len = htons(len);
-	pkt->len = htons(body_len);
-	
-	strcpy(pkt->msg.data, cl_ctx->msg);
+	for (size_t i = 0; i < 2; i++) {
+		double_pkt[i].type = CL_PKT_MSG;
+		double_pkt[i].msg.len = htons(len);
+		double_pkt[i].len = htons(body_len);
+		
+		strcpy(double_pkt[i].msg.data, cl_ctx->msg);
+	}
 
-	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
+	send(cl_ctx->tcp_fd, double_pkt, size_pkt * 2, 0);
 
+	free(double_pkt);
 	return 0;
 }
+
+// static int send_message(struct client_ctx *cl_ctx, size_t len)
+// {
+// 	struct packet *pkt;
+// 	int body_len;
+
+// 	body_len = sizeof(pkt->msg) + len;
+
+// 	pkt = &cl_ctx->pkt;
+// 	pkt->type = CL_PKT_MSG;
+// 	pkt->msg.len = htons(len);
+// 	pkt->len = htons(body_len);
+	
+// 	strcpy(pkt->msg.data, cl_ctx->msg);
+
+// 	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
+
+// 	return 0;
+// }
 
 static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 {
