@@ -50,7 +50,7 @@ static int connect_server()
 	return fd;
 }
 
-// commit SHA: X
+// commit SHA: 4ebf84f5e771f581133a22ef19b141c29458737f
 static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
 	struct packet *double_pkt;
