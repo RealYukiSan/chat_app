@@ -50,29 +50,21 @@ static int connect_server()
 	return fd;
 }
 
+// simulate short recv to make sure server can handle that: https://github.com/Reyuki-san/chat_app/commit/4fa068256a113295338e340a1b87a0d24cb8111b?diff=split see https://t.me/GNUWeeb/849129 for further explanation 
 static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
-	struct packet *double_pkt;
+	struct packet *pkt;
 	size_t body_len;
-	size_t size_pkt;
 
-	body_len = sizeof(double_pkt->msg) + len;
-	size_pkt = HEADER_SIZE + body_len;
-	double_pkt = malloc(sizeof(*double_pkt) * 2);
-	if (!double_pkt)
-		return -1;
+	body_len = sizeof(pkt->msg) + len;
 
-	for (size_t i = 0; i < 2; i++) {
-		double_pkt[i].type = CL_PKT_MSG;
-		double_pkt[i].msg.len = htons(len);
-		double_pkt[i].len = htons(body_len);
-		
-		strcpy(double_pkt[i].msg.data, cl_ctx->msg);
-	}
+	pkt = &cl_ctx->pkt;
+	pkt->type = CL_PKT_MSG;
+	pkt->msg.len = htons(len);
+	pkt->len = htons(body_len);
+	strcpy(pkt->msg.data, cl_ctx->msg);
 
-	memmove(double_pkt->__raw_buf + body_len, &double_pkt[1], size_pkt);
-	send(cl_ctx->tcp_fd, double_pkt, size_pkt * 2, 0);
-	free(double_pkt);
+	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
 
 	return 0;
 }
