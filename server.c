@@ -124,6 +124,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, ch
 	struct packet *pkt;
 	struct packet_msg_id *msg_id;
 	size_t body_len;
+	size_t msg_len;
 
 	pkt = malloc(sizeof(*pkt));
 	if (!pkt) {
@@ -132,13 +133,15 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, ch
 	}
 
 	msg_id = &pkt->msg_id;
-	body_len = sizeof(cs->pkt.msg) + htons(cs->pkt.msg.len);
+	msg_len = ntohs(cs->pkt.msg.len);
+	body_len = sizeof(*msg_id) + msg_len;
 	pkt->type = SR_PKT_MSG_ID;
-	pkt->len = cs->pkt.len;
-	memcpy(&msg_id->msg, &cs->pkt.msg, body_len);
+	pkt->len = htons(body_len);
+	msg_id->msg.len = cs->pkt.msg.len;
+	memcpy(&msg_id->msg.data, &cs->pkt.msg.data, msg_len);
 	strcpy(msg_id->identity, addr_str);
 
-	printf("%s\n", msg_id->msg.data);
+	printf("%s: %s\n", msg_id->identity, msg_id->msg.data);
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (srv_ctx->clients[i].fd != -1) {
