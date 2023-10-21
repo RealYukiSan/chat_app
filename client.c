@@ -176,7 +176,9 @@ static int initialize_ctx(struct client_ctx *cl_ctx)
 int main(void)
 {
 	struct client_ctx cl_ctx;
-	initialize_ctx(&cl_ctx);
+	if (initialize_ctx(&cl_ctx) < 0)
+		return -1;
+
 	start_event_loop(&cl_ctx);
 	
 	return 0;
