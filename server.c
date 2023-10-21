@@ -119,7 +119,6 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
-
 static const char *stringify_ipv4(struct sockaddr_in *addr)
 {
 	static char buf[IP4_IDENTITY_SIZE];
@@ -151,9 +150,10 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 	memcpy(&msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
-		if (srv_ctx->clients[i].fd != -1) {
-			send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0);
-		}
+		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
+			continue;
+		
+		send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0);
 	}
 
 	free(pkt);
@@ -205,7 +205,7 @@ try_again:
 		char *src = dest + expected_len;
 		memmove(dest, src, cs->recv_len);
 		goto try_again;
-	}	
+	}
 
 	return 0;
 }
