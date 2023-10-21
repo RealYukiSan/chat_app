@@ -10,7 +10,7 @@
 #include "util.h"
 #include "packet.h"
 
-#define PLACE_HOLDER "ME> "
+#define PLACE_HOLDER "ME > "
 struct client_ctx {
 	/* tcp sockstream FD */
 	int 		tcp_fd;
@@ -119,12 +119,26 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 static int handle_events(struct client_ctx *cl_ctx)
 {
 	if (cl_ctx->fds[0].revents & POLLIN) {
-		/**
-		 * TODO:
-		 * 	setelah menerima:
-		 * 		- transform format/mengekstra pesan dengan cara yang benar
-		 * 		- menampilkan pesan yang telah terekstrak
-		*/
+		struct packet *pkt;
+		size_t recv_len;
+		int ret;
+
+		recv_len = sizeof(*pkt);
+		pkt = malloc(recv_len);
+		if (!pkt) {
+			perror("malloc");
+			return -1;
+		}
+
+		ret = recv(cl_ctx->tcp_fd, pkt, recv_len, MSG_DONTWAIT);
+		if (ret < 0) {
+			perror("recv");
+			return -1;
+		}
+		
+		printf("\rTEST > %s\n", pkt->msg_id.msg.data);
+		free(pkt);
+		cl_ctx->need_reload_prompt = true;
 	}
 
 	if (cl_ctx->fds[1].revents & POLLIN) {
@@ -146,7 +160,7 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 			fflush(stdout);
 			cl_ctx->need_reload_prompt = false;
 		}
-		
+
 		nr_ready = poll(cl_ctx->fds, 2, -1);
 		if (nr_ready < 0) {
 			perror("poll");
