@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <poll.h>
 #include <stdio.h>
@@ -26,7 +27,7 @@ struct client_ctx {
 	bool		need_reload_prompt;
 };
 
-static int connect_server()
+static int connect_server(void)
 {
 	int fd;
 	struct sockaddr_in addr;
@@ -70,7 +71,10 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	pkt->len = htons(body_len);
 	strcpy(pkt->msg.data, cl_ctx->msg);
 
-	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
+	if (send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0) > 0) {
+		perror("send");
+		return -1;
+	}
 
 	return 0;
 }
@@ -83,9 +87,11 @@ static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 	if (!strcmp(cl_ctx->msg, "clear")) {
 		printf("\ec");
 		fflush(stdout);
+		return 0;
 	}
 
-	send_message(cl_ctx, len);
+	if (send_message(cl_ctx, len) < 0)
+		return -1;
 
 	return 0;
 }
@@ -109,7 +115,8 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 	if (cl_ctx->msg[len - 1] == '\n')
 		cl_ctx->msg[len - 1] = '\0';
 
-	process_user_input(cl_ctx, len);
+	if (process_user_input(cl_ctx, len) < 0)
+		return -1;
 
 	cl_ctx->need_reload_prompt = true;
 	return 0;
@@ -131,11 +138,13 @@ static int handle_events(struct client_ctx *cl_ctx)
 
 		ret = recv(cl_ctx->tcp_fd, pkt, recv_len, MSG_DONTWAIT);
 		if (ret < 0) {
+			free(pkt);
 			perror("recv");
 			return -1;
 		}
 
 		if (ret == 0) {
+			free(pkt);
 			printf("\nServer disconnected\n");
 			return -1;
 		}
@@ -167,6 +176,9 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 
 		nr_ready = poll(cl_ctx->fds, 2, -1);
 		if (nr_ready < 0) {
+			if (errno == EINTR)
+				continue;
+
 			perror("poll");
 			break;
 		}

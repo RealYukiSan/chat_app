@@ -29,7 +29,7 @@ struct server_ctx {
 	struct client_state	*clients;
 };
 
-static int create_server()
+static int create_server(void)
 {
 	int fd;
 	struct sockaddr_in addr;
@@ -153,7 +153,11 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
 			continue;
 		
-		send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0);
+		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
+			perror("send");
+			free(pkt);
+			return -1;
+		}
 	}
 
 	free(pkt);
@@ -222,7 +226,7 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 	if (ret < 0) {
 		if (ret == EAGAIN || ret == EINTR)
 			return 0;
-		
+
 		perror("recv");
 		return -1;
 	}
