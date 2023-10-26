@@ -296,6 +296,7 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 	srv_ctx->clients = calloc(NR_CLIENT, sizeof(*srv_ctx->clients));
 	if (!srv_ctx->clients) {
 		perror("calloc");
+		free(srv_ctx->fds);
 		close(srv_ctx->tcp_fd);
 		return -1;
 	}
