@@ -1,3 +1,6 @@
+<details>
+  <summary>version 1.0 (a little bit messy)</summary>
+
 on server side:
 
 - declare and initialize bind_addr
@@ -175,3 +178,73 @@ additional function from lib:
 - inet_pton presentation to network | string to binary
 - inet_ntop binary to string
 - htons manipulate endianness
+
+</details>
+
+<details>
+  <summary>version 2.0 (better format)</summary>
+
+  ## This software consists of client and server, whereas the server act as (...) and client act as (...)
+
+  ### how it works
+
+  <details>
+    <summary>general</summary>
+
+  - define simple protocol to construct the packet.
+
+  </details>
+
+  <details>
+    <summary>on the client side</summary>
+
+  - setup client
+    - create FD with socket
+    - connect to the server
+  - initialize needed data
+  - start event loop
+    - get input from user and store it
+      - construct the packet to be sent 
+      - send the packet to the server
+    - receive message from other client through server
+      - decode/transform/extact/whatever the packet
+      - read it
+
+  </details>
+
+  <details>
+    <summary>on the server side</summary>
+
+  - setup server
+    - create FD with socket
+    - bind the port
+    - start listen the incoming request
+  - initialize needed data
+  - start event loop
+    - accept connection from the first request on queue
+    - receive the payload data (packet message)
+      - decode/transform/extact/whatever the packet
+      - read it and store to history chat
+      - send the packet to other clients (broadcast)
+  </details>
+  <hr/>
+</details>
+
+<details>
+  <summary>version 3.0 (detail possible vuln and how to protect against it)</summary>
+  coming soon.
+</details>
+
+<details>
+  <summary>version 3.1 (error handling)</summary>
+  coming soon.
+</details>
+
+<details>
+  <summary>version 3.2 (optimization and best practice)</summary>
+  
+  ### key takeaways
+  - memory management
+    - memory layouting
+    - choose the right data structure
+</details>
