@@ -46,7 +46,7 @@ static int connect_server()
 		close(fd);
 		return -1;
 	}
-	
+
 	return fd;
 }
 
@@ -77,9 +77,8 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 
 static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 {
-	if (!strcmp(cl_ctx->msg, "exit")) {
+	if (!strcmp(cl_ctx->msg, "exit"))
 		return -1;
-	}
 
 	if (!strcmp(cl_ctx->msg, "clear")) {
 		printf("\ec");
@@ -87,7 +86,7 @@ static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 	}
 
 	send_message(cl_ctx, len);
-	
+
 	return 0;
 }
 
@@ -111,7 +110,7 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 		cl_ctx->msg[len - 1] = '\0';
 
 	process_user_input(cl_ctx, len);
-	
+
 	cl_ctx->need_reload_prompt = true;
 	return 0;
 }
@@ -151,7 +150,7 @@ static int handle_events(struct client_ctx *cl_ctx)
 			return -1;
 	}
 
-	return 0;	
+	return 0;
 }
 
 static void start_event_loop(struct client_ctx *cl_ctx)
@@ -199,6 +198,6 @@ int main(void)
 		return -1;
 
 	start_event_loop(&cl_ctx);
-	
+
 	return 0;
 }

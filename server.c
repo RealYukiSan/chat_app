@@ -80,7 +80,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 
 	if (!cs)
 		return -1;
-	
+
 	cs->fd = fd;
 	cs->addr = addr;
 	srv_ctx->fds[i + 1].fd = fd;
@@ -89,7 +89,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	port = ntohs(addr.sin_port);
 	inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
 	printf("New client connected from %s:%d\n", addr_str, port);
-	
+
 	return 0;
 }
 
@@ -99,7 +99,7 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	struct sockaddr_in addr;
 	socklen_t addr_len = sizeof(cl_state.addr);
 	int fd;
-	
+
 	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&addr, &addr_len);
 
 	if (fd < 0) {
@@ -157,7 +157,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 	}
 
 	free(pkt);
-	
+
 	return 0;
 }
 
@@ -190,13 +190,13 @@ try_again:
 		return 0;
 
 	switch (cs->pkt.type) {
-		case CL_PKT_MSG:
-			handle_cl_pkt_msg(cs, srv_ctx);
-			break;
+	case CL_PKT_MSG:
+		handle_cl_pkt_msg(cs, srv_ctx);
+		break;
 
-		default:
-			printf("Invalid packet\n");
-			return -1;
+	default:
+		printf("Invalid packet\n");
+		return -1;
 	}
 
 	cs->recv_len -= expected_len;
@@ -260,7 +260,7 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 		}
 	}
 
-	return 0;	
+	return 0;
 }
 
 static void start_event_loop(struct server_ctx *srv_ctx)
@@ -291,7 +291,7 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 		perror("calloc");
 		return -1;
 	}
-	
+
 	srv_ctx->clients = calloc(NR_CLIENT, sizeof(*srv_ctx->clients));
 	if (!srv_ctx->clients) {
 		perror("calloc");
@@ -308,7 +308,7 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 	for (size_t i = 0; i < NR_CLIENT; i++)
 		srv_ctx->clients[i].fd = -1;
 
-	return 0;	
+	return 0;
 }
 
 static void clean_ctx(struct server_ctx *srv_ctx)
@@ -322,9 +322,8 @@ int main(void)
 {
 	struct server_ctx srv_ctx;
 
-	if (initialize_ctx(&srv_ctx) < 0) {
+	if (initialize_ctx(&srv_ctx) < 0)
 		return -1;
-	}
 	
 	start_event_loop(&srv_ctx);
 	clean_ctx(&srv_ctx);
