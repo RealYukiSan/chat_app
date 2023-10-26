@@ -289,12 +289,14 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 	srv_ctx->fds = calloc(NR_CLIENT + 1, sizeof(*srv_ctx->fds));
 	if (!srv_ctx->fds) {
 		perror("calloc");
+		close(srv_ctx->tcp_fd);
 		return -1;
 	}
 
 	srv_ctx->clients = calloc(NR_CLIENT, sizeof(*srv_ctx->clients));
 	if (!srv_ctx->clients) {
 		perror("calloc");
+		close(srv_ctx->tcp_fd);
 		return -1;
 	}
 
