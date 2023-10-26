@@ -237,7 +237,8 @@ additional function from lib:
 
 <details>
   <summary>version 3.1 (error handling)</summary>
-  coming soon.
+
+  - funfact: it's a little bit unique that both server and client dispatch the disconnect event on recv syscall, so we need to handle it to prevent infinite loop
 </details>
 
 <details>
