@@ -135,6 +135,11 @@ static int handle_events(struct client_ctx *cl_ctx)
 			perror("recv");
 			return -1;
 		}
+
+		if (ret == 0) {
+			printf("\nServer disconnected\n");
+			return -1;
+		}
 		
 		printf("\rTEST > %s\n", pkt->msg_id.msg.data);
 		free(pkt);
