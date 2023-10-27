@@ -70,11 +70,8 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	pkt->msg.len = htons(len);
 	pkt->len = htons(body_len);
 	strcpy(pkt->msg.data, cl_ctx->msg);
-
-	if (send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0) > 0) {
-		perror("send");
-		return -1;
-	}
+	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE, 0);
+	send(cl_ctx->tcp_fd, &pkt->msg, body_len, 0);
 
 	return 0;
 }
