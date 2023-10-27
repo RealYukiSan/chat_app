@@ -181,6 +181,13 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	return 0;
 }
 
+static void close_cl(struct server_ctx *srv_ctx, int idx)
+{
+	close(srv_ctx->fds[idx + 1].fd);
+	srv_ctx->fds[idx + 1].fd = -1;
+	srv_ctx->clients[idx].fd = -1;
+}
+
 static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
 {
 	size_t expected_len;
@@ -233,14 +240,13 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 
 	if (ret == 0) {
 		printf("Client disconnected\n");
-		close(srv_ctx->fds[id_client + 1].fd);
-		srv_ctx->fds[id_client + 1].fd = -1;
-		srv_ctx->clients[id_client].fd = -1;
+		close_cl(srv_ctx, id_client);
 		return 0;
 	}
 
 	cs->recv_len += ret;
-	process_cl_pkt(cs, srv_ctx);
+	if (process_cl_pkt(cs, srv_ctx) < 0)
+		close_cl(srv_ctx, id_client);
 
 	return 0;
 }
@@ -259,7 +265,8 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 			break;
 
 		if (srv_ctx->fds[i].revents & POLLIN) {
-			handle_event(srv_ctx, i - 1);
+			if (handle_event(srv_ctx, i - 1) < 0)
+				return -1;
 			nr_event--;
 		}
 	}

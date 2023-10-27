@@ -239,6 +239,7 @@ additional function from lib:
   <summary>version 3.1 (error handling)</summary>
 
   - funfact: it's a little bit unique that both server and client dispatch the disconnect event on recv syscall, so we need to handle it to prevent infinite loop
+  - somehow, if the client sends an invalid packet multiple times, it will cause a recv error (bad address). Therefore, immediately force the server to shutdown, so you need to close the sender connection to protect against it
 </details>
 
 <details>
