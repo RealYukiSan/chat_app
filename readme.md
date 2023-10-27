@@ -68,7 +68,7 @@ image from: [What does "address space" means when talking about IO devices?](htt
 
 ### A few terms to note:
 - buffer: some data that was held somewhere in memory
-- I/O stream<sup>[1](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c)</sup>: wide-terms for represents an input source or an output destination (?)
+- I/O stream<sup>[1](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c)</sup>: wide-terms used for represents an input source or an output destination (?)
 - flush: clear buffer and stream it to the specified FD, e.g `printf` tidak akan ditampilkan jika belum di-flush ke stdout dan masih disimpan dalam bentuk buffer
 - buffering mode on stream<sup>[1](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c)</sup>: there's three types of buffering mode, unbuffered, line-buffered, and fullbuffered, each of mode have predefined constant in macro: `_IONBF`, `_IOLBF`, and `_IOFBF` respectively, see [`man setvbuf`](https://t.me/GNUWeeb/840558) for the details of the behaviour
 - also `struct FILE *` is refer to stream and [doesn't literally refer to the actual file](https://stackoverflow.com/questions/38652953/what-does-stream-mean-in-c#:~:text=does%20NOT%20point%20to%20the%20actual%20file)
@@ -93,3 +93,11 @@ note: I want someone who reads this to validate and verify my statement, so feel
   - maybe the analogy is more or less like, Why bother to execute a bunch of instructions instead of passing additional information that is not so large (does this mean for the sake of efficiency?)
 - sizeof means the size of a defined data structure on a variable, not the size of the variable's value itself. Why? You might ask, That's how data structure and memory work (?)
   - and not to confuse with strlen, which only applied to strings in order to count the amount of char.
+
+### Part 2
+
+- How does the program interpret the network data? especially in terms of memory. I curious how to debug this process with gdb but didn't have any clue to get started :(
+  - this curiousity comes from [the buffer overflow vuln on the server](https://gist.githubusercontent.com/alviroiskandar/c95b95b2a0d7c13913f0ce5c12215340/raw/d52f14f7bbf8e7f1b5a4429cabb224860cb25947/server.c.txt#:~:text=disini%20ada%20bug%20buffer%20overflow)
+  - I think the highlighted thing in this context would be:
+    - the way processors read/fetch data, how operator and operand are used at the machine-code (assembly) level
+    - how could packed and aligned memory [affect the program behavior](https://developer.ibm.com/articles/pa-dalign/#:~:text=the%20following%20scenarios%2C%20in%20increasing%20order%20of%20severity%2C%20are%20all%20possible%3A)?
