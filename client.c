@@ -126,6 +126,24 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 	return 0;
 }
 
+static void process_srv_packet(struct packet *pkt)
+{
+	switch (pkt->type) {
+	case SR_PKT_LEAVE:
+		printf("\r%s leave the server\n", pkt->event.identity);
+		break;
+	case SR_PKT_JOIN:
+		printf("\r%s joined the server\n", pkt->event.identity);
+		break;
+	case SR_PKT_MSG_ID:
+		printf("\r%s > %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
+		break;
+
+	default:
+		break;
+	}
+}
+
 static int handle_events(struct client_ctx *cl_ctx)
 {
 	if (cl_ctx->fds[0].revents & POLLIN) {
@@ -153,20 +171,7 @@ static int handle_events(struct client_ctx *cl_ctx)
 			return -1;
 		}
 
-		switch (pkt->type) {
-		case SR_PKT_LEAVE:
-			printf("\r%s leave the server\n", pkt->event.identity);
-			break;
-		case SR_PKT_JOIN:
-			printf("\r%s joined the server\n", pkt->event.identity);
-			break;
-		case SR_PKT_MSG_ID:
-			printf("\r%s > %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
-			break;
-		
-		default:
-			break;
-		}
+		process_srv_packet(pkt);
 
 		free(pkt);
 		cl_ctx->need_reload_prompt = true;
