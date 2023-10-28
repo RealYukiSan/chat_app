@@ -57,21 +57,34 @@ static int connect_server(void)
  * see the below links for further explanation:
  * https://github.com/Reyuki-san/chat_app/commit/14b61d5e062dffcfab8400f0932b32be0d0a2591
  * https://t.me/GNUWeeb/849129
+ * https://t.me/GNUWeeb/852296
 */
 static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
 	struct packet *pkt;
 	size_t body_len;
+	char *raw;
+	size_t pkt_len;
 
+	static const size_t nr_pkt = 5;
 	body_len = sizeof(pkt->msg) + len;
+	pkt_len = HEADER_SIZE + body_len;
+
+	raw = malloc(pkt_len * nr_pkt);
+	if (!raw)
+		return -1;
 
 	pkt = &cl_ctx->pkt;
 	pkt->type = CL_PKT_MSG;
 	pkt->msg.len = htons(len);
 	pkt->len = htons(body_len);
 	strcpy(pkt->msg.data, cl_ctx->msg);
-	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE, 0);
-	send(cl_ctx->tcp_fd, &pkt->msg, body_len, 0);
+
+	for (size_t i = 0; i < nr_pkt; i++)
+		memcpy(&raw[i * pkt_len], pkt, pkt_len);
+
+	send(cl_ctx->tcp_fd, raw, pkt_len * nr_pkt, 0);
+	free(raw);
 
 	return 0;
 }
