@@ -126,54 +126,65 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 	return 0;
 }
 
-static void process_srv_packet(struct packet *pkt)
+static int process_srv_packet(struct client_ctx *cl_ctx)
 {
-	switch (pkt->type) {
+	size_t expected_len;
+
+try_again:
+	expected_len = ntohs(cl_ctx->pkt.len) + HEADER_SIZE;
+	if (cl_ctx->recv_len < HEADER_SIZE)
+		return 0;
+
+	if (cl_ctx->recv_len < expected_len)
+		return 0;
+
+	switch (cl_ctx->pkt.type) {
 	case SR_PKT_LEAVE:
-		printf("\r%s leave the server\n", pkt->event.identity);
+		printf("\r%s leave the server\n", cl_ctx->pkt.event.identity);
 		break;
 	case SR_PKT_JOIN:
-		printf("\r%s joined the server\n", pkt->event.identity);
+		printf("\r%s joined the server\n", cl_ctx->pkt.event.identity);
 		break;
 	case SR_PKT_MSG_ID:
-		printf("\r%s > %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
+		printf("\r%s > %s\n", cl_ctx->pkt.msg_id.identity, cl_ctx->pkt.msg_id.msg.data);
 		break;
 
 	default:
 		break;
 	}
+
+	cl_ctx->recv_len -= expected_len;
+	if (cl_ctx->recv_len > 0) {
+		char *dest = (char *)&cl_ctx->pkt;
+		char *src = dest + expected_len;
+		memmove(dest, src, cl_ctx->recv_len);
+		goto try_again;
+	}
+
+	return 0;
 }
 
 static int handle_events(struct client_ctx *cl_ctx)
 {
 	if (cl_ctx->fds[0].revents & POLLIN) {
-		struct packet *pkt;
-		size_t recv_len;
+		char *buf;
 		int ret;
 
-		recv_len = sizeof(*pkt);
-		pkt = malloc(recv_len);
-		if (!pkt) {
-			perror("malloc");
-			return -1;
-		}
-
-		ret = recv(cl_ctx->tcp_fd, pkt, recv_len, MSG_DONTWAIT);
+		buf = (char *)&cl_ctx->pkt + cl_ctx->recv_len;
+		ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt), MSG_DONTWAIT);
 		if (ret < 0) {
-			free(pkt);
 			perror("recv");
 			return -1;
 		}
 
 		if (ret == 0) {
-			free(pkt);
 			printf("\nServer disconnected\n");
 			return -1;
 		}
+		
+		cl_ctx->recv_len += ret;
+		process_srv_packet(cl_ctx);
 
-		process_srv_packet(pkt);
-
-		free(pkt);
 		cl_ctx->need_reload_prompt = true;
 	}
 
@@ -222,6 +233,9 @@ static int initialize_ctx(struct client_ctx *cl_ctx)
 
 	cl_ctx->fds[1].fd = STDIN_FILENO;
 	cl_ctx->fds[1].events = POLLIN;
+
+	cl_ctx->recv_len = 0;
+	memset(&cl_ctx->pkt, 0, sizeof(cl_ctx->pkt));
 
 	return 0;
 }
