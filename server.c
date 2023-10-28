@@ -237,7 +237,7 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 	char *buf;
 
 	buf = (char *)&cs->pkt + cs->recv_len;
-	ret = recv(cs->fd, buf, sizeof(cs->pkt), MSG_DONTWAIT);
+	ret = recv(cs->fd, buf, sizeof(cs->pkt) - cs->recv_len, MSG_DONTWAIT);
 	if (ret < 0) {
 		if (ret == EAGAIN || ret == EINTR)
 			return 0;
