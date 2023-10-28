@@ -13,11 +13,19 @@
 
 enum {
 	CL_PKT_MSG = 10,
-	CL_PKT_JOIN = 11,
 
 	SR_PKT_MSG_ID = 20,
 	SR_PKT_JOIN = 21,
+	SR_PKT_LEAVE = 22,
 };
+
+struct packet_msg_leave {
+	char	identity[IP4_IDENTITY_SIZE];
+} __packed;
+
+struct packet_msg_join {
+	char	identity[IP4_IDENTITY_SIZE];
+} __packed;
 
 struct packet_msg {
 	uint16_t	len;
@@ -39,7 +47,7 @@ struct packet {
 		/* send data from client to server */
 		struct packet_msg 	msg;
 		char			__raw_buf[4096 + MAX_SIZE_MSG];
-	};	
+	};
 };
 
 #endif

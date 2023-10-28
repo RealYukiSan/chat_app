@@ -146,7 +146,7 @@ static int handle_events(struct client_ctx *cl_ctx)
 			printf("\nServer disconnected\n");
 			return -1;
 		}
-		
+
 		printf("\r%s > %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
 		free(pkt);
 		cl_ctx->need_reload_prompt = true;
