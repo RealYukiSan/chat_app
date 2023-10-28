@@ -70,12 +70,9 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	pkt = &cl_ctx->pkt;
 	pkt->type = CL_PKT_MSG;
 	pkt->msg.len = htons(len);
-	/* adjust the body len to fool server */
-	pkt->len = htons(sizeof(pkt->__raw_buf));
+	pkt->len = htons(body_len);
 	strcpy(pkt->msg.data, cl_ctx->msg);
-	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE, 0);
-	send(cl_ctx->tcp_fd, &pkt->msg, body_len, 0);
-	send(cl_ctx->tcp_fd, (char *)&pkt->msg + body_len, sizeof(pkt->__raw_buf), 0);
+	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
 
 	return 0;
 }
