@@ -212,6 +212,14 @@ try_again:
 
 	cs->recv_len -= expected_len;
 	if (cs->recv_len > 0) {
+		/**
+		 * the terms packed: just sent occupied size to the server
+		 * and unpacked is the opposite: adding redundant padding
+		 * the condition will not be met until short recv occurs
+		 * and also either short or multiple *unpacked* packet will met this condition but result in an Invalid packet 
+		 * actually invalid packet (like just send partial data, not included message) but simulated in short recv will work just fine, but will be buggy
+		 * multiple packet that are packed will not going to this condition, it will just work as expected, no buf overf, no vuln.
+		*/
 		char *dest = (char *)&cs->pkt;
 		char *src = dest + expected_len;
 		memmove(dest, src, cs->recv_len);
@@ -234,6 +242,7 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 		if (ret == EAGAIN || ret == EINTR)
 			return 0;
 
+		/* the client will be disconnected ungracefully */
 		perror("recv");
 		return -1;
 	}

@@ -249,6 +249,8 @@ additional function from lib:
   <summary>version 3.2 (optimization and best practice)</summary>
   
   ### key takeaways
+  - recv will batch the sendto from the client if the size of more than one sendto fits the size of the parameter in recvfrom
+    - but still wondering, How exactly did this happen? I mean, I think I misunderstood the mechanism since batching does not always work like that
   - memory management
     - memory layouting
     - choose the right data structure

@@ -63,28 +63,19 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
 	struct packet *pkt;
 	size_t body_len;
-	char *raw;
-	size_t pkt_len;
 
-	static const size_t nr_pkt = 5;
+	/* Make it dynamic/flexible, Just send occupied size */
 	body_len = sizeof(pkt->msg) + len;
-	pkt_len = HEADER_SIZE + body_len;
-
-	raw = malloc(pkt_len * nr_pkt);
-	if (!raw)
-		return -1;
 
 	pkt = &cl_ctx->pkt;
 	pkt->type = CL_PKT_MSG;
 	pkt->msg.len = htons(len);
-	pkt->len = htons(body_len);
+	/* adjust the body len to fool server */
+	pkt->len = htons(sizeof(pkt->__raw_buf));
 	strcpy(pkt->msg.data, cl_ctx->msg);
-
-	for (size_t i = 0; i < nr_pkt; i++)
-		memcpy(&raw[i * pkt_len], pkt, pkt_len);
-
-	send(cl_ctx->tcp_fd, raw, pkt_len * nr_pkt, 0);
-	free(raw);
+	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE, 0);
+	send(cl_ctx->tcp_fd, &pkt->msg, body_len, 0);
+	send(cl_ctx->tcp_fd, (char *)&pkt->msg + body_len, sizeof(pkt->__raw_buf), 0);
 
 	return 0;
 }
