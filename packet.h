@@ -18,7 +18,8 @@ enum {
 	/* broadcast packet from server to active client */
 	SR_PKT_MSG_ID = 20,
 	/* send event info from server to client */
-	SR_PKT_EVENT = 21,
+	SR_PKT_JOIN = 21,
+	SR_PKT_LEAVE = 22,
 };
 
 struct packet_msg {
