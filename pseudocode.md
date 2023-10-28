@@ -231,12 +231,7 @@ additional function from lib:
 </details>
 
 <details>
-  <summary>version 3.0 (detail possible vuln and how to protect against it)</summary>
-  coming soon.
-</details>
-
-<details>
-  <summary>version 3.1 (error handling)</summary>
+  <summary>version 3.0 (detail possible vuln and how to protect against it and error handling)</summary>
 
   - funfact: it's a little bit unique that both server and client dispatch the disconnect event on recv syscall, so we need to handle it to prevent infinite loop
   - somehow, if the client sends an invalid packet multiple times, it will cause a recv error (bad address). Therefore, immediately force the server to shutdown, so you need to close the sender connection to protect against it
@@ -246,7 +241,7 @@ additional function from lib:
 </details>
 
 <details>
-  <summary>version 3.2 (optimization and best practice)</summary>
+  <summary>version 3.1 (optimization and best practice)</summary>
   
   ### key takeaways
   - recv will batch the sendto from the client if the size of more than one sendto fits the size of the parameter in recvfrom

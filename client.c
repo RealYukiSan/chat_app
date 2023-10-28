@@ -147,7 +147,7 @@ static int handle_events(struct client_ctx *cl_ctx)
 			return -1;
 		}
 		
-		printf("\rTEST > %s\n", pkt->msg_id.msg.data);
+		printf("\r%s > %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
 		free(pkt);
 		cl_ctx->need_reload_prompt = true;
 	}
