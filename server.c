@@ -14,7 +14,7 @@
 #include "util.h"
 #include "packet.h"
 
-#define NR_CLIENT 2
+#define NR_CLIENT 5
 
 struct client_state {
 	int 			fd;
