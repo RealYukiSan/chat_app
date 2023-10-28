@@ -69,7 +69,7 @@ static int broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, char addr_st
 	struct packet *pkt;
 
 	pkt = &srv_ctx->clients[idx].pkt;
-	pkt->type = SR_PKT_EVENT;
+	pkt->type = SR_PKT_JOIN;
 	pkt->len = htons(IP4_IDENTITY_SIZE);
 	memcpy(&pkt->event.identity, addr_str, IP4_IDENTITY_SIZE);
 
@@ -248,7 +248,7 @@ try_again:
 	return 0;
 }
 
-static int handle_event(struct server_ctx *srv_ctx, int id_client)
+static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 {
 	ssize_t ret;
 	struct client_state *cs = &srv_ctx->clients[id_client];
@@ -268,6 +268,20 @@ static int handle_event(struct server_ctx *srv_ctx, int id_client)
 
 	if (ret == 0) {
 		printf("Client disconnected\n");
+		struct packet *pkt;
+
+		pkt = &cs->pkt;
+		pkt->len = IP4_IDENTITY_SIZE;
+		pkt->type = SR_PKT_LEAVE;
+		memcpy(pkt->event.identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
+
+		for (size_t i = 0; i < NR_CLIENT; i++) {
+			if (i == id_client || srv_ctx->clients[i].fd < 0)
+				continue;
+
+			send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0);
+		}
+
 		close_cl(srv_ctx, id_client);
 		return 0;
 	}

@@ -148,7 +148,10 @@ static int handle_events(struct client_ctx *cl_ctx)
 		}
 
 		switch (pkt->type) {
-		case SR_PKT_EVENT:
+		case SR_PKT_LEAVE:
+			printf("\r%s leave the server\n", pkt->event.identity);
+			break;
+		case SR_PKT_JOIN:
 			printf("\r%s joined the server\n", pkt->event.identity);
 			break;
 		case SR_PKT_MSG_ID:
