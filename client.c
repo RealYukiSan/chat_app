@@ -147,7 +147,18 @@ static int handle_events(struct client_ctx *cl_ctx)
 			return -1;
 		}
 
-		printf("\r%s > %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
+		switch (pkt->type) {
+		case SR_PKT_EVENT:
+			printf("\r%s joined the server\n", pkt->event.identity);
+			break;
+		case SR_PKT_MSG_ID:
+			printf("\r%s > %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
+			break;
+		
+		default:
+			break;
+		}
+
 		free(pkt);
 		cl_ctx->need_reload_prompt = true;
 	}

@@ -12,20 +12,14 @@
 #define IP4_IDENTITY_SIZE INET_ADDRSTRLEN + sizeof(":65535")
 
 enum {
+	/* sent packet from client to server */
 	CL_PKT_MSG = 10,
 
+	/* broadcast packet from server to active client */
 	SR_PKT_MSG_ID = 20,
-	SR_PKT_JOIN = 21,
-	SR_PKT_LEAVE = 22,
+	/* send event info from server to client */
+	SR_PKT_EVENT = 21,
 };
-
-struct packet_msg_leave {
-	char	identity[IP4_IDENTITY_SIZE];
-} __packed;
-
-struct packet_msg_join {
-	char	identity[IP4_IDENTITY_SIZE];
-} __packed;
 
 struct packet_msg {
 	uint16_t	len;
@@ -37,6 +31,10 @@ struct packet_msg_id {
 	struct packet_msg 	msg;
 } __packed;
 
+struct packet_msg_event {
+	char			identity[IP4_IDENTITY_SIZE];
+} __packed;
+
 struct packet {
 	uint8_t	 	type;
 	uint8_t	 	__pad;
@@ -46,6 +44,8 @@ struct packet {
 		struct packet_msg_id	msg_id;
 		/* send data from client to server */
 		struct packet_msg 	msg;
+		/* join and leave notifier */
+		struct packet_msg_event	event;
 		char			__raw_buf[4096 + MAX_SIZE_MSG];
 	};
 };

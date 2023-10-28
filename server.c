@@ -64,11 +64,37 @@ static int create_server(void)
 	return fd;
 }
 
+static int broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, char addr_str[IP4_IDENTITY_SIZE])
+{
+	struct packet *pkt;
+
+	pkt = &srv_ctx->clients[idx].pkt;
+	pkt->type = SR_PKT_EVENT;
+	pkt->len = htons(IP4_IDENTITY_SIZE);
+	memcpy(&pkt->event.identity, addr_str, IP4_IDENTITY_SIZE);
+
+	for (uint32_t i = 0; i < NR_CLIENT; i++) {
+		if (idx == i || srv_ctx->clients[idx].fd < 0)
+			continue;
+
+		send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0);
+	}
+	
+	return 0;
+}
+
+static const char *stringify_ipv4(struct sockaddr_in *addr)
+{
+	static char buf[IP4_IDENTITY_SIZE];
+	inet_ntop(AF_INET, &addr->sin_addr, buf, INET_ADDRSTRLEN);
+	sprintf(buf + strlen(buf), ":%hu", ntohs(addr->sin_port));
+	return buf;
+}
+
 static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_ctx)
 {
 	struct client_state *cs = NULL;
-	char addr_str[INET_ADDRSTRLEN];
-	uint16_t port;
+	char addr_str[IP4_IDENTITY_SIZE];
 	uint32_t i;
 
 	for (i = 0; i < NR_CLIENT; i++) {
@@ -86,9 +112,10 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	srv_ctx->fds[i + 1].fd = fd;
 	srv_ctx->fds[i + 1].events = POLLIN;
 
-	port = ntohs(addr.sin_port);
-	inet_ntop(AF_INET, &addr.sin_addr, addr_str, INET_ADDRSTRLEN);
-	printf("New client connected from %s:%d\n", addr_str, port);
+	memcpy(addr_str, stringify_ipv4(&addr), IP4_IDENTITY_SIZE);
+	printf("New client connected from %s\n", addr_str);
+
+	broadcast_join(srv_ctx, i, addr_str);
 
 	return 0;
 }
@@ -117,14 +144,6 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	}
 
 	return 0;
-}
-
-static const char *stringify_ipv4(struct sockaddr_in *addr)
-{
-	static char buf[IP4_IDENTITY_SIZE];
-	inet_ntop(AF_INET, &addr->sin_addr, buf, INET_ADDRSTRLEN);
-	sprintf(buf + strlen(buf), ":%hu", ntohs(addr->sin_port));
-	return buf;
 }
 
 static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
