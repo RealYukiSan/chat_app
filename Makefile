@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-# https://t.me/GNUWeeb/854603
+# https://t.me/GNUWeeb/854603 and https://gcc.gnu.org/legacy-ml/gcc-help/2009-02/msg00130.html
 CFLAGS = -Wall -Wextra -O2 -ggdb3
 
 all: client server
