@@ -178,8 +178,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 	cs->pkt.type = SR_PKT_MSG_ID;
 	cs->pkt.len = htons(body_len);
 	msg_id->msg.len = msg_len_he;
-	/* Hey, how does this work? It seems like a contradiction to what has been explained before */
-	memcpy(&msg_id->msg.data, &cs->pkt.msg.data, msg_len_he);
+	memmove(&msg_id->msg.data, &cs->pkt.msg.data, msg_len_he);
 	memcpy(&msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
 
 	/* Second, also don't forget to fill the pkt because it's not a same reference as cs->pkt */
