@@ -158,50 +158,58 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
-static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
+static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, size_t msg_len_he)
 {
-	struct packet *pkt;
+	// struct packet *pkt;
 	struct packet_msg_id *msg_id;
 	size_t body_len;
-	size_t msg_len;
 
-	pkt = malloc(sizeof(*pkt));
-	if (!pkt) {
-		perror("malloc");
-		return -1;
-	}
+	// pkt = malloc(sizeof(*pkt));
+	// if (!pkt) {
+	// 	perror("malloc");
+	// 	return -1;
+	// }
 
-	msg_id = &pkt->msg_id;
-	msg_len = ntohs(cs->pkt.msg.len);
-	printf("something mutate the value of %zu %d but where?\n", msg_len, cs->pkt.msg.len);
-	body_len = sizeof(*msg_id) + msg_len;
-	pkt->type = SR_PKT_MSG_ID;
-	pkt->len = htons(body_len);
-	msg_id->msg.len = cs->pkt.msg.len;
-	memcpy(&msg_id->msg.data, &cs->pkt.msg.data, msg_len);
+	/* First fill the msg_id, in order to avoid re-preparation on store_msg */
+	msg_id = &cs->pkt.msg_id;
+	body_len = sizeof(*msg_id) + msg_len_he;
+	// pkt->type = SR_PKT_MSG_ID;
+	// pkt->len = htons(body_len);
+	cs->pkt.type = SR_PKT_MSG_ID;
+	cs->pkt.len = htons(body_len);
+	msg_id->msg.len = msg_len_he;
+	/* Hey, how does this work? It seems like a contradiction to what has been explained before */
+	memcpy(&msg_id->msg.data, &cs->pkt.msg.data, msg_len_he);
 	memcpy(&msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
+
+	/* Second, also don't forget to fill the pkt because it's not a same reference as cs->pkt */
+	// memcpy(&pkt->msg_id, msg_id, body_len);
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
 			continue;
 
-		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
+		if (send(srv_ctx->clients[i].fd, &cs->pkt, HEADER_SIZE + body_len, 0) < 0) {
 			perror("send");
-			free(pkt);
+			// free(pkt);
 			return -1;
 		}
 	}
 
-	free(pkt);
+	// free(pkt);
 
 	return 0;
 }
 
 /* store it, just store the following information: msg, msg len, identity */
-static int store_msg(struct packet_msg_id *msg_id, FILE *fd, size_t write_len)
+static int store_msg(struct client_state *cs, FILE *fd)
 {
+	size_t write_len;
+
+	write_len = cs->pkt.msg_id.msg.len + sizeof(cs->pkt.msg_id);
+
 	fseek(fd, 0, SEEK_END);
-	fwrite(msg_id, write_len, 1, fd);
+	fwrite(&cs->pkt.msg_id, write_len, 1, fd);
 	if (ferror(fd)) {
 		perror("fwrite");
 		return -1;
@@ -213,17 +221,11 @@ static int store_msg(struct packet_msg_id *msg_id, FILE *fd, size_t write_len)
 
 static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 {
-	struct packet_msg_id *msg_id;
-	size_t write_len;
 	size_t msg_len_he;
 
 	msg_len_he = ntohs(cs->pkt.msg.len);
-	write_len = msg_len_he + sizeof(*msg_id);
 
-	msg_id = &cs->pkt.msg_id;
-	memcpy(msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
-
-	printf("New message from %s = %s\n", msg_id->identity, msg_id->msg.data);
+	printf("New message from %s = %s\n", stringify_ipv4(&cs->addr), cs->pkt.msg.data);
 
 	/**
 	 * TODO:
@@ -231,10 +233,10 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	 * 		- melakukan broadcast ke client yang terhubung
 	 * 		- menyimpan pesan kedalam record yang ada di db history
 	*/
-	if (broadcast_msg(cs, srv_ctx) < 0)
+	if (broadcast_msg(cs, srv_ctx, msg_len_he) < 0)
 		return -1;
 
-	store_msg(msg_id, srv_ctx->db, write_len);
+	store_msg(cs, srv_ctx->db);
 
 	return 0;
 }
@@ -304,8 +306,6 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 		perror("recv");
 		return -1;
 	}
-
-	printf("%d\n", ntohs(cs->pkt.msg.len));
 
 	if (ret == 0) {
 		printf("Client disconnected\n");
