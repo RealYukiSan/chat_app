@@ -173,7 +173,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 
 	msg_id = &pkt->msg_id;
 	msg_len = ntohs(cs->pkt.msg.len);
-	printf("something mutate the value of %ld %d but where?\n", msg_len, cs->pkt.msg.len);
+	printf("something mutate the value of %zu %d but where?\n", msg_len, cs->pkt.msg.len);
 	body_len = sizeof(*msg_id) + msg_len;
 	pkt->type = SR_PKT_MSG_ID;
 	pkt->len = htons(body_len);
