@@ -2,6 +2,7 @@
 #define PACKET_H
 
 #include <stdint.h>
+#include <arpa/inet.h>
 
 #ifndef __packed
 #define __packed __attribute__((__packed__))
@@ -27,9 +28,10 @@ struct packet_msg {
 	char		data[];
 } __packed;
 
+/* Why does the struct order is matter here? */
 struct packet_msg_id {
-	char			identity[IP4_IDENTITY_SIZE];
 	struct packet_msg 	msg;
+	char			identity[IP4_IDENTITY_SIZE];
 } __packed;
 
 struct packet_msg_event {

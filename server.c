@@ -98,7 +98,6 @@ static void sync_history(struct server_ctx *srv_ctx)
 {
 	/**
 	 * read file contents
-	 * store it somewhere, just store the following information: msg, msg len, identity
 	 * broadcast it to the active client
 	*/
 }
@@ -184,7 +183,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
 			continue;
-		
+
 		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
 			perror("send");
 			free(pkt);
@@ -197,9 +196,33 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 	return 0;
 }
 
+/* store it, just store the following information: msg, msg len, identity */
+static int store_msg(struct packet_msg_id *msg_id, FILE *fd, size_t write_len)
+{
+	fseek(fd, 0, SEEK_END);
+	fwrite(msg_id, write_len, 1, fd);
+	if (ferror(fd)) {
+		perror("fwrite");
+		return -1;
+	}
+
+	fflush(fd);
+	return 0;
+}
+
 static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 {
-	printf("New message from %s = %s\n", stringify_ipv4(&cs->addr), cs->pkt.msg.data);
+	struct packet_msg_id *msg_id;
+	size_t write_len;
+	size_t msg_len_he;
+
+	msg_len_he = ntohs(cs->pkt.msg.len);
+	write_len = msg_len_he + sizeof(*msg_id);
+
+	msg_id = &cs->pkt.msg_id;
+	memcpy(msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
+
+	printf("New message from %s = %s\n", msg_id->identity, msg_id->msg.data);
 
 	/**
 	 * TODO:
@@ -209,6 +232,8 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	*/
 	if (broadcast_msg(cs, srv_ctx) < 0)
 		return -1;
+
+	store_msg(msg_id, srv_ctx->db, write_len);
 
 	return 0;
 }
@@ -386,9 +411,9 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 			perror("fopen");
 			return -1;
 		}
-		printf("Create new database file...");
+		printf("Create new database file...\n");
 	} else {
-		printf("Load the database...");
+		printf("Load the database...\n");
 	}
 
 	return 0;
