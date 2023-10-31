@@ -4,14 +4,15 @@ CFLAGS = -Wall -Wextra -O2
 
 all: client server
 
-client.o: client.c util.h
-server.o: server.c util.h
-util.o: util.c util.h
+# It seems object files are only needed if the header also has the c file, like util.h and util.c
+# but for now, only use HDR instead of OBJ
+HDR = util.h packet.h
 
-OBJ = util.o
+client.o: client.c $(HDR)
+server.o: server.c $(HDR)
 
-client: $(OBJ) client.o
-server: $(OBJ) server.o
+client: client.o
+server: server.o
 
 clean:
 	rm -vf client server *.o
