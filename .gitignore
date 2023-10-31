@@ -4,3 +4,4 @@ server
 .vscode/
 *.bin
 *.log
+*.db

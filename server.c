@@ -16,6 +16,8 @@
 
 #define NR_CLIENT 5
 
+static const char db_file_name[] = "chat_history.db";
+
 struct client_state {
 	int 			fd;
 	struct sockaddr_in 	addr;
@@ -25,6 +27,7 @@ struct client_state {
 
 struct server_ctx {
 	int 			tcp_fd;
+	FILE			*db;
 	struct pollfd		*fds;
 	struct client_state	*clients;
 };
@@ -91,6 +94,15 @@ static const char *stringify_ipv4(struct sockaddr_in *addr)
 	return buf;
 }
 
+static void sync_history(struct server_ctx *srv_ctx)
+{
+	/**
+	 * read file contents
+	 * store it somewhere, just store the following information: msg, msg len, identity
+	 * broadcast it to the active client
+	*/
+}
+
 static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_ctx)
 {
 	struct client_state *cs = NULL;
@@ -116,6 +128,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	printf("New client connected from %s\n", addr_str);
 
 	broadcast_join(srv_ctx, i, addr_str);
+	sync_history(srv_ctx);
 
 	return 0;
 }
@@ -363,6 +376,20 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 
 	for (size_t i = 0; i < NR_CLIENT; i++)
 		srv_ctx->clients[i].fd = -1;
+
+	srv_ctx->db = fopen(db_file_name, "r+");
+	/* if the file didn't exist, then create one */
+	if (!srv_ctx->db) {
+		srv_ctx->db = fopen(db_file_name, "w+");
+		/* if something still goes wrong, raise/throw an error */
+		if (!srv_ctx->db) {
+			perror("fopen");
+			return -1;
+		}
+		printf("Create new database file...");
+	} else {
+		printf("Load the database...");
+	}
 
 	return 0;
 }
