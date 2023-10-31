@@ -160,29 +160,16 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 
 static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, size_t msg_len_he)
 {
-	// struct packet *pkt;
 	struct packet_msg_id *msg_id;
 	size_t body_len;
 
-	// pkt = malloc(sizeof(*pkt));
-	// if (!pkt) {
-	// 	perror("malloc");
-	// 	return -1;
-	// }
-
-	/* First fill the msg_id, in order to avoid re-preparation on store_msg */
 	msg_id = &cs->pkt.msg_id;
 	body_len = sizeof(*msg_id) + msg_len_he;
-	// pkt->type = SR_PKT_MSG_ID;
-	// pkt->len = htons(body_len);
 	cs->pkt.type = SR_PKT_MSG_ID;
 	cs->pkt.len = htons(body_len);
 	msg_id->msg.len = msg_len_he;
 	memmove(&msg_id->msg.data, &cs->pkt.msg.data, msg_len_he);
 	memcpy(&msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
-
-	/* Second, also don't forget to fill the pkt because it's not a same reference as cs->pkt */
-	// memcpy(&pkt->msg_id, msg_id, body_len);
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
@@ -190,12 +177,9 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 
 		if (send(srv_ctx->clients[i].fd, &cs->pkt, HEADER_SIZE + body_len, 0) < 0) {
 			perror("send");
-			// free(pkt);
 			return -1;
 		}
 	}
-
-	// free(pkt);
 
 	return 0;
 }
