@@ -28,10 +28,10 @@ struct packet_msg {
 	char		data[];
 } __packed;
 
-/* Why does the struct order is matter here? */
+/* Why does the struct order is matter here? see https://t.me/GNUWeeb/854569 for further explanation */
 struct packet_msg_id {
-	struct packet_msg 	msg;
 	char			identity[IP4_IDENTITY_SIZE];
+	struct packet_msg 	msg;
 } __packed;
 
 struct packet_msg_event {

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-CFLAGS = -Wall -Wextra -O2
+# https://t.me/GNUWeeb/854603
+CFLAGS = -Wall -Wextra -O2 -ggdb3
 
 all: client server
 

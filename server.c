@@ -173,6 +173,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 
 	msg_id = &pkt->msg_id;
 	msg_len = ntohs(cs->pkt.msg.len);
+	printf("something mutate the value of %ld %d but where?\n", msg_len, cs->pkt.msg.len);
 	body_len = sizeof(*msg_id) + msg_len;
 	pkt->type = SR_PKT_MSG_ID;
 	pkt->len = htons(body_len);
@@ -303,6 +304,8 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 		perror("recv");
 		return -1;
 	}
+
+	printf("%d\n", ntohs(cs->pkt.msg.len));
 
 	if (ret == 0) {
 		printf("Client disconnected\n");
