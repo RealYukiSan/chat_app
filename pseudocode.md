@@ -236,6 +236,7 @@ additional function from lib:
   - funfact: it's a little bit unique that both server and client dispatch the disconnect event on recv syscall, so we need to handle it to prevent infinite loop
   - somehow, if the client sends an invalid packet multiple times, it will cause a recv error (bad address). Therefore, immediately force the server to shutdown, so you need to close the sender connection to protect against it
   - there's a situation where short recv (unintentional, here's the [simulated](https://github.com/Reyuki-san/chat_app/commit/cedb2d431bbee662339807177f7687cedaa1ab8c) one) and sending multiple packets at once (intentional, here's the [simulated](https://github.com/Reyuki-san/chat_app/commit/15f07aefac60a4f2f95de73d92fe245ce2db0170) one) occur. In that case, we need to carefully keep track of packet that have been read during the recv call. Otherwise it will crash the server
+  - add bound checking verification for message len member struct, since it can be fooled with arbitary value from the client's side, see [this message](https://t.me/GNUWeeb/854582) for more detail
 
   Thanks viro-senpai for [pointing out](https://gist.githubusercontent.com/alviroiskandar/c95b95b2a0d7c13913f0ce5c12215340/raw/d52f14f7bbf8e7f1b5a4429cabb224860cb25947/server.c.txt) points 2 and 3
 </details>
