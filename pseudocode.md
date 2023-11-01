@@ -257,6 +257,8 @@ additional function from lib:
 
 ### Here is an example of how the package is expected
 
+Commit SHA: `9441e97`
+
 ```
 MSG CONTENT = hey\0
 
@@ -275,6 +277,6 @@ New client connected from 127.0.0.1:35604
 Client disconnected
 ```
 
-But what caused the recv error to be triggered is still mysterious. maybe recv_len < expected len cause this error?
+But what caused the recv error to be triggered is still mysterious. maybe recv_len < expected len cause this error? see [the comment section on this commit](https://github.com/Reyuki-san/chat_app/blob/9441e97b14d010224d1b735540f614a0b1b6c049/client.c#L77)
 
 </details>
