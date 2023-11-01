@@ -67,21 +67,12 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	/* Make it dynamic/flexible, Just send occupied size */
 	body_len = sizeof(pkt->msg) + len;
 
-	/* expand size of __raw_buf, recompile, and rerun */
 	pkt = &cl_ctx->pkt;
 	pkt->type = CL_PKT_MSG;
 	pkt->msg.len = htons(len);
-	pkt->len = htons(sizeof(pkt->__raw_buf));
+	pkt->len = htons(body_len);
 	strcpy(pkt->msg.data, cl_ctx->msg);
-	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE, 0);
-	send(cl_ctx->tcp_fd, &pkt->msg, sizeof(pkt->__raw_buf), 0);
-	/**
-	 * The (char *)&pkt->msg + body_len will adjust the size of pkt->msg, see __raw_buf on packet.h
-	 * and that's probably the reason why the maximum length of 1 packet always 8192 (Max Body) + 4 (Header) = 8196 bytes
-	 * the compiler is indeed clever XD
-	 * is this the reason that affects the recv error? see https://github.com/Reyuki-san/chat_app/blob/418cbdfd8fcf8eed037af24196806c3b95661e11/pseudocode.md#:~:text=But%20what%20caused%20the%20recv%20error
-	*/
-	// send(cl_ctx->tcp_fd, (char *)&pkt->msg + body_len, sizeof(pkt->__raw_buf), 0);
+	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
 
 	return 0;
 }
