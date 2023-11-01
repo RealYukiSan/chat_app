@@ -77,7 +77,7 @@ static int broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, char addr_st
 	memcpy(&pkt->event.identity, addr_str, IP4_IDENTITY_SIZE);
 
 	for (uint32_t i = 0; i < NR_CLIENT; i++) {
-		if (idx == i || srv_ctx->clients[idx].fd < 0)
+		if (idx == i || srv_ctx->clients[i].fd < 0)
 			continue;
 
 		send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0);
