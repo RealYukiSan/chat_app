@@ -78,6 +78,7 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	 * The (char *)&pkt->msg + body_len will adjust the size of pkt->msg, see __raw_buf on packet.h
 	 * and that's probably the reason why the maximum length of 1 packet always 8196 bytes
 	 * the compiler is indeed clever XD
+	 * is this the reason that affects the recv error? see https://github.com/Reyuki-san/chat_app/blob/418cbdfd8fcf8eed037af24196806c3b95661e11/pseudocode.md#:~:text=But%20what%20caused%20the%20recv%20error
 	*/
 	send(cl_ctx->tcp_fd, (char *)&pkt->msg + body_len, sizeof(pkt->__raw_buf), 0);
 
