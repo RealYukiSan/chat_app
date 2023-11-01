@@ -240,6 +240,7 @@ try_again:
 		return 0;
 
 	expected_len = HEADER_SIZE + ntohs(cs->pkt.len);
+	printf("%zd %zd\n", cs->recv_len, expected_len);
 	if (cs->recv_len < expected_len)
 		return 0;
 

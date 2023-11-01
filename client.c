@@ -70,9 +70,16 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	pkt = &cl_ctx->pkt;
 	pkt->type = CL_PKT_MSG;
 	pkt->msg.len = htons(len);
-	pkt->len = htons(body_len);
+	pkt->len = htons(sizeof(pkt->__raw_buf) + body_len);
 	strcpy(pkt->msg.data, cl_ctx->msg);
-	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
+	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE, 0);
+	send(cl_ctx->tcp_fd, &pkt->msg, body_len, 0);
+	/**
+	 * The (char *)&pkt->msg + body_len will adjust the size of pkt->msg, see __raw_buf on packet.h
+	 * and that's probably the reason why the maximum length of 1 packet always 8196 bytes
+	 * the compiler is indeed clever XD
+	*/
+	send(cl_ctx->tcp_fd, (char *)&pkt->msg + body_len, sizeof(pkt->__raw_buf), 0);
 
 	return 0;
 }

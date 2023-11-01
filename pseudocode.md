@@ -251,3 +251,30 @@ additional function from lib:
     - memory layouting
     - choose the right data structure
 </details>
+
+<details>
+  <summary>version 3.2 (additional explanation)</summary>
+
+### Here is an example of how the package is expected
+
+```
+MSG CONTENT = hey\0
+
+HDR     + UINT 16 BITS  + MSG LEN       + RAW BYTE      = TOTAL EXPECTED LEN
+4       + 2             + 4             + 8192          = 8202 BYTES
+```
+
+Usually, you'll just use the occupied size instead of the raw byte. But for this cases, I just want try to proof [the overflow of memcpy](https://t.me/GNUWeeb/854582) before adding [boundary verification](https://t.me/GNUWeeb/854601).
+But instead, I just got `recv: connection reset by peer` on the client-side T_T
+
+I will assume the recv error on the client-side caused by Client disconnected log from the server-side
+```
+New client connected from 127.0.0.1:35604
+4 8202 # first recv
+8196 8202 # second recv
+Client disconnected
+```
+
+But what caused the recv error to be triggered is still mysterious. maybe recv_len < expected len cause this error?
+
+</details>
