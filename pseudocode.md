@@ -257,7 +257,7 @@ additional function from lib:
 
 ### Here is an example of how the package is expected
 
-Commit SHA: `9441e97`
+Commit SHA: [`9441e97`](https://github.com/Reyuki-san/chat_app/blob/9441e97b14d010224d1b735540f614a0b1b6c049)
 
 ```
 MSG CONTENT = hey\0
