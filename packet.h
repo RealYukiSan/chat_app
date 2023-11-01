@@ -41,6 +41,7 @@ struct packet_msg_event {
 struct packet {
 	uint8_t	 	type;
 	uint8_t	 	__pad;
+	/* one question: is this member really needed? I mean, its value can be replicated by sizeof(struct packet) + msg len */
 	uint16_t	len;
 	union {
 		/* broadcast data from server to clients */
