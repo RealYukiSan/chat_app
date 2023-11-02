@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #endif
 
+#include <stddef.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
@@ -94,12 +95,36 @@ static const char *stringify_ipv4(struct sockaddr_in *addr)
 	return buf;
 }
 
-static void sync_history(struct server_ctx *srv_ctx)
+static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 {
 	/**
 	 * read file contents
 	 * broadcast it to the active client
 	*/
+
+	const size_t content_len = offsetof(struct packet_msg_id, msg.data);
+	struct packet *pkt;
+	pkt = malloc(sizeof(*pkt));
+	if (!pkt) {
+		perror("malloc");
+		return -1;
+	}
+
+	rewind(srv_ctx->db);
+	while (1) {
+		size_t len;
+
+		len = fread(&pkt->msg_id, content_len, 1, srv_ctx->db);
+		if (!len)
+			break;
+		len = fread(&pkt->msg_id.msg.data, pkt->msg_id.msg.len, 1, srv_ctx->db);
+		pkt->len = pkt->msg_id.msg.len + sizeof(pkt->msg_id);
+		pkt->type = SR_PKT_MSG_ID;
+		send(cs_fd, pkt, sizeof(*pkt) + pkt->msg_id.msg.len, 0);
+	}
+
+	free(pkt);
+	return 0;
 }
 
 static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_ctx)
@@ -127,7 +152,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	printf("New client connected from %s\n", addr_str);
 
 	broadcast_join(srv_ctx, i, addr_str);
-	sync_history(srv_ctx);
+	sync_history(srv_ctx, cs->fd);
 
 	return 0;
 }
