@@ -113,14 +113,17 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 	rewind(srv_ctx->db);
 	while (1) {
 		size_t len;
+		size_t msg_len;
 
 		len = fread(&pkt->msg_id, content_len, 1, srv_ctx->db);
 		if (!len)
 			break;
-		len = fread(&pkt->msg_id.msg.data, pkt->msg_id.msg.len, 1, srv_ctx->db);
-		pkt->len = pkt->msg_id.msg.len + sizeof(pkt->msg_id);
+
+		msg_len = ntohs(pkt->msg_id.msg.len);
+		len = fread(&pkt->msg_id.msg.data, msg_len, 1, srv_ctx->db);
+		pkt->len = htons(msg_len + sizeof(pkt->msg_id));
 		pkt->type = SR_PKT_MSG_ID;
-		send(cs_fd, pkt, sizeof(*pkt) + pkt->msg_id.msg.len, 0);
+		send(cs_fd, pkt, HEADER_SIZE + msg_len + sizeof(pkt->msg_id), 0);
 	}
 
 	free(pkt);
@@ -192,7 +195,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 	body_len = sizeof(*msg_id) + msg_len_he;
 	cs->pkt.type = SR_PKT_MSG_ID;
 	cs->pkt.len = htons(body_len);
-	msg_id->msg.len = msg_len_he;
+	msg_id->msg.len = htons(msg_len_he);
 
 	/**
 	 * > https://t.me/GNUWeeb/854582
@@ -222,7 +225,7 @@ static int store_msg(struct client_state *cs, FILE *fd)
 {
 	size_t write_len;
 
-	write_len = cs->pkt.msg_id.msg.len + sizeof(cs->pkt.msg_id);
+	write_len = ntohs(cs->pkt.msg_id.msg.len) + sizeof(cs->pkt.msg_id);
 
 	fseek(fd, 0, SEEK_END);
 	fwrite(&cs->pkt.msg_id, write_len, 1, fd);

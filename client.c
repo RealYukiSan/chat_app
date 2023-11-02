@@ -157,6 +157,7 @@ try_again:
 	if (cl_ctx->recv_len > 0) {
 		char *dest = (char *)&cl_ctx->pkt;
 		char *src = dest + expected_len;
+		/* you can reproduce buffer overflow on the memmove with this commit: https://github.com/Reyuki-san/chat_app/blob/7b409a8326c6d784e2fec290173d7d0562bef0f5/client.c#L160 */
 		memmove(dest, src, cl_ctx->recv_len);
 		goto try_again;
 	}
