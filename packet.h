@@ -41,7 +41,11 @@ struct packet_msg_event {
 struct packet {
 	uint8_t	 	type;
 	uint8_t	 	__pad;
-	/* one question: is this member really needed? I mean, its value can be replicated by sizeof(struct packet) + msg len */
+	/**
+	 * one question: is this member really needed? I mean, its value can be replicated by sizeof(struct packet) + msg len
+	 * answer: ofc if you use sizeof(struct packet) the union size will be picked; in this case, the larger member is __raw_buf
+	 * so it is not efficient since the flexible or dynamic array isn't used anymore.
+	*/
 	uint16_t	len;
 	union {
 		/* broadcast data from server to clients */
