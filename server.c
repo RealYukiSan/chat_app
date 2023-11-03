@@ -341,7 +341,7 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 		struct packet *pkt;
 
 		pkt = &cs->pkt;
-		pkt->len = IP4_IDENTITY_SIZE;
+		pkt->len = htons(IP4_IDENTITY_SIZE);
 		pkt->type = SR_PKT_LEAVE;
 		memcpy(pkt->event.identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
 
