@@ -318,4 +318,6 @@ But what caused the recv error to be triggered is still mysterious. maybe recv_l
 you can see `27 - 29` in `msg_id` is overlap with `6 - 28` in `msg` union member of `struct packet`
 What doesn't make any sense to me is, if the memmove cause overlaps, why is the rest of the unhandled buffer still stored after null char? inside `cs->pkt.msg.data` at `broadcast_msg` function
 
+this diagram inspired by the [stackexchange site](https://cs50.stackexchange.com/questions/14615/memory-overlap-in-c)
+
 </details>
