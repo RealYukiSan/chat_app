@@ -266,6 +266,8 @@ HDR     + UINT 16 BITS  + MSG LEN       + RAW BYTE      = TOTAL EXPECTED LEN
 4       + 2             + 4             + 8192          = 8202 BYTES
 ```
 
+*Baru sadar `MSG LEN` tu dari mana ya? ohh ternyata LEN-nya dari MSG CONTENT, kayaknya keliru sih di commit SHA itu :v
+
 Usually, you'll just use the occupied size instead of the raw byte. But for this cases, I just want try to proof [the overflow of memcpy](https://t.me/GNUWeeb/854582) before adding [boundary verification](https://t.me/GNUWeeb/854601).
 But instead, I just got `recv: connection reset by peer` on the client-side T_T
 
@@ -278,5 +280,42 @@ Client disconnected
 ```
 
 But what caused the recv error to be triggered is still mysterious. maybe recv_len < expected len cause this error? see [the comment section on this commit](https://github.com/Reyuki-san/chat_app/blob/9441e97b14d010224d1b735540f614a0b1b6c049/client.c#L77)
+
+### Visualization overlaps on memmove
+
+```
++--------------------------------------+
+|                Source                |
++---+---+---+---+----+---+----+--------+
+| 0 | - | 4 | - | 6  | - | 28 |        |
++---+---+---+---+----+---+----+        |
+|     4     |    2   |   22   |  EMPTY |
++-----------+--------+--------+        |
+|    HDR    |       BODY      |        |
++-----------+-----------------+--------+
+|                                      |
++--------------------------------------+
+|              Destination             |
++---+---+---+---+----+---+----+---+----+
+| 0 | - | 4 | - | 27 | - | 29 | - | 51 |
++---+---+---+---+----+---+----+---+----+
+|     4     |   23   |   2    |   22   |
++-----------+--------+--------+--------+
+|    HDR    |           BODY           |
++-----------+--------------------------+
+|                                      |
++--------------------------------------+
+| Destination: msg_id picked from union|
++--------------------------------------+
+| Source: member msg picked from union |
++--------------------------------------+
+| BUFFER MSG CONTENT:                  |
++--------------------------------------+
+| long message lorem is\0              |
++---+---+---+---+----+---+----+---+----+
+```
+
+you can see `27 - 29` in `msg_id` is overlap with `6 - 28` in `msg` union member of `struct packet`
+What doesn't make any sense to me is, if the memmove cause overlaps, why is the rest of the unhandled buffer still stored after null char? inside `cs->pkt.msg.data` at `broadcast_msg` function
 
 </details>

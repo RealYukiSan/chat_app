@@ -195,6 +195,10 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 	body_len = sizeof(*msg_id) + msg_len_he;
 	cs->pkt.type = SR_PKT_MSG_ID;
 	cs->pkt.len = htons(body_len);
+	/**
+	 * Overlap happens here; the maximum char length contained in the buffer message is 21, and the 22 offset will be replaced by null char
+	 * see the diagram in the pseudocode.md
+	*/
 	msg_id->msg.len = htons(msg_len_he);
 
 	/**
