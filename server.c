@@ -188,17 +188,20 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 
 static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, size_t msg_len_he)
 {
+	struct packet *pkt;
 	struct packet_msg_id *msg_id;
 	size_t body_len;
 
-	msg_id = &cs->pkt.msg_id;
+	pkt = malloc(sizeof(*pkt));
+	if (!pkt) {
+		perror("malloc");
+		return -1;
+	}
+
+	msg_id = &pkt->msg_id;
 	body_len = sizeof(*msg_id) + msg_len_he;
-	cs->pkt.type = SR_PKT_MSG_ID;
-	cs->pkt.len = htons(body_len);
-	/**
-	 * Overlap happens here; the maximum char length contained in the buffer message is 21, and the 22 offset will be replaced by null char
-	 * see the diagram in the pseudocode.md
-	*/
+	pkt->type = SR_PKT_MSG_ID;
+	pkt->len = htons(body_len);
 	msg_id->msg.len = htons(msg_len_he);
 
 	/**
@@ -215,11 +218,14 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
 			continue;
 
-		if (send(srv_ctx->clients[i].fd, &cs->pkt, HEADER_SIZE + body_len, 0) < 0) {
+		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
 			perror("send");
 			return -1;
 		}
 	}
+
+	memcpy(&cs->pkt, pkt, HEADER_SIZE + body_len);
+	free(pkt);
 
 	return 0;
 }
