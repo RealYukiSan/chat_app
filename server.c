@@ -472,6 +472,7 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 			perror("fopen");
 			close(srv_ctx->tcp_fd);
 			free(srv_ctx->fds);
+			free(srv_ctx->clients);
 			return -1;
 		}
 		printf("Create new database file...\n");
