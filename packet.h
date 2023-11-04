@@ -58,4 +58,50 @@ struct packet {
 	};
 };
 
+static inline size_t prep_pkt_msg_id(struct packet *pkt, const char *id, const char *msg, size_t len)
+{
+	size_t body_len;
+
+	body_len = sizeof(pkt->msg_id) + len;
+	pkt->type = SR_PKT_MSG_ID;
+	pkt->len = htons(body_len);
+	pkt->msg_id.msg.len = htons(len);
+	strncpy(pkt->msg_id.identity, id, sizeof(pkt->msg_id.identity));
+	strncpy(pkt->msg_id.msg.data, msg, len);
+
+	return HEADER_SIZE + body_len;
+}
+
+static inline size_t prep_pkt_msg(struct packet *pkt, const char *msg, size_t len)
+{
+	/* Make it dynamic/flexible, Just send occupied size */
+	size_t body_len;
+
+	body_len = sizeof(pkt->msg) + len;
+	pkt->type = CL_PKT_MSG;
+	pkt->len = htons(body_len);
+	pkt->msg.len = htons(len);
+	memcpy(pkt->msg.data, msg, len);
+
+	return HEADER_SIZE + body_len;
+}
+
+static inline size_t prep_pkt_msg_join(struct packet *pkt, const char *id)
+{
+	pkt->type = SR_PKT_JOIN;
+	pkt->len = htons(sizeof(pkt->event));
+	strncpy(pkt->event.identity, id, sizeof(pkt->event.identity));
+
+	return HEADER_SIZE + sizeof(pkt->event);
+}
+
+static inline size_t prep_pkt_msg_left(struct packet *pkt, const char *id)
+{
+	pkt->type = SR_PKT_LEAVE;
+	pkt->len = htons(sizeof(pkt->event));
+	strncpy(pkt->event.identity, id, sizeof(pkt->event.identity));
+
+	return HEADER_SIZE + sizeof(pkt->event);
+}
+
 #endif

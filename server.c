@@ -22,6 +22,7 @@ static const char db_file_name[] = "chat_history.db";
 struct client_state {
 	int 			fd;
 	struct sockaddr_in 	addr;
+	// todo: remove the pkt member
 	struct packet 		pkt;
 	size_t			recv_len;
 };
@@ -75,22 +76,29 @@ static void close_cl(struct server_ctx *srv_ctx, size_t idx)
 	srv_ctx->clients[idx].fd = -1;
 }
 
-static void broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, const char *addr_str)
+static int broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, const char *addr_str)
 {
 	struct packet *pkt;
+	size_t pkt_len;
 
-	pkt = &srv_ctx->clients[idx].pkt;
-	pkt->type = SR_PKT_JOIN;
-	pkt->len = htons(sizeof(pkt->event));
-	strncpy(pkt->event.identity, addr_str, sizeof(pkt->event.identity));
+	pkt = malloc(sizeof(*pkt));
+	if (!pkt) {
+		perror("malloc");
+		return -1;
+	}
 
+	pkt_len = prep_pkt_msg_join(pkt, addr_str);
 	for (uint32_t i = 0; i < NR_CLIENT; i++) {
 		if (idx == i || srv_ctx->clients[i].fd < 0)
 			continue;
 
-		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + sizeof(pkt->event), 0) < 0)
+		if (send(srv_ctx->clients[i].fd, pkt, pkt_len, 0) < 0)
 			close_cl(srv_ctx, idx);
 	}
+
+	free(pkt);
+
+	return 0;
 }
 
 static const char *stringify_ipv4(struct sockaddr_in *addr)
@@ -180,7 +188,8 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	addr_str = stringify_ipv4(&addr);
 	printf("New client connected from %s\n", addr_str);
 
-	broadcast_join(srv_ctx, i, addr_str);
+	if (broadcast_join(srv_ctx, i, addr_str) < 0)
+		return -1;
 
 	if (sync_history(srv_ctx, cs->fd) < 0)
 		close_cl(srv_ctx, i);
@@ -233,42 +242,21 @@ static int store_msg(struct packet *pkt, FILE *fd)
 	return 0;
 }
 
-static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, size_t msg_len_he)
+static int broadcast_msg(struct packet *pkt, struct server_ctx *srv_ctx, struct client_state *cs, size_t pkt_len)
 {
-	struct packet *pkt;
-	struct packet_msg_id *msg_id;
-	size_t body_len;
 	int ret;
-
-	pkt = malloc(sizeof(*pkt));
-	if (!pkt) {
-		perror("malloc");
-		return -1;
-	}
-
-	msg_id = &pkt->msg_id;
-	body_len = sizeof(*msg_id) + msg_len_he;
-	pkt->type = SR_PKT_MSG_ID;
-	pkt->len = htons(body_len);
-	msg_id->msg.len = htons(msg_len_he);
-
-	memmove(&msg_id->msg.data, &cs->pkt.msg.data, msg_len_he);
-	strncpy(msg_id->identity, stringify_ipv4(&cs->addr), sizeof(msg_id->identity));
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
 			continue;
 
-		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
+		if (send(srv_ctx->clients[i].fd, pkt, pkt_len, 0) < 0) {
 			perror("send");
-			free(pkt);
 			return -1;
 		}
 	}
 
 	ret = store_msg(pkt, srv_ctx->db);
-
-	free(pkt);
 
 	return ret;
 }
@@ -276,6 +264,9 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx)
 {
 	size_t msg_len_he;
+	size_t pkt_len;
+	struct packet *pkt;
+	int ret;
 
 	msg_len_he = ntohs(cs->pkt.msg.len);
 
@@ -285,9 +276,19 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	if (cs->pkt.msg.data[msg_len_he - 1] != '\0')
 		return -1;
 
-	printf("New message from %s = %s\n", stringify_ipv4(&cs->addr), cs->pkt.msg.data);
+	pkt = malloc(sizeof(*pkt));
+	if (!pkt) {
+		perror("malloc");
+		return -1;
+	}
 
-	return broadcast_msg(cs, srv_ctx, msg_len_he);
+	pkt_len = prep_pkt_msg_id(pkt, stringify_ipv4(&cs->addr), cs->pkt.msg.data, msg_len_he);
+
+	ret = broadcast_msg(pkt, srv_ctx, cs, pkt_len);
+	printf("New message from %s = %s\n", pkt->msg_id.identity, pkt->msg_id.msg.data);
+	free(pkt);
+
+	return ret;
 }
 
 static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
@@ -336,11 +337,13 @@ static int broadcast_leave(struct server_ctx *srv_ctx, struct client_state *cs)
 {
 	struct packet *pkt;
 
-	pkt = &cs->pkt;
-	pkt->len = htons(sizeof(pkt->event));
-	pkt->type = SR_PKT_LEAVE;
-	strncpy(pkt->event.identity, stringify_ipv4(&cs->addr), sizeof(pkt->event.identity));
+	pkt = malloc(sizeof(*pkt));
+	if (!pkt) {
+		perror("malloc");
+		return -1;
+	}
 
+	prep_pkt_msg_left(pkt, stringify_ipv4(&cs->addr));
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (cs == &srv_ctx->clients[i] || srv_ctx->clients[i].fd < 0)
 			continue;
@@ -348,6 +351,8 @@ static int broadcast_leave(struct server_ctx *srv_ctx, struct client_state *cs)
 		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0) < 0)
 			close_cl(srv_ctx, i);
 	}
+
+	free(pkt);
 
 	return 0;
 }

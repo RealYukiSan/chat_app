@@ -62,21 +62,22 @@ static int connect_server(void)
 static int send_message(struct client_ctx *cl_ctx, size_t len)
 {
 	struct packet *pkt;
-	size_t body_len;
+	size_t pkt_len;
 
-	/* Make it dynamic/flexible, Just send occupied size */
-	body_len = sizeof(pkt->msg) + len;
-
-	pkt = &cl_ctx->pkt;
-	pkt->type = CL_PKT_MSG;
-	pkt->msg.len = htons(len);
-	pkt->len = htons(body_len);
-	strcpy(pkt->msg.data, cl_ctx->msg);
-	if (send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
-		perror("send");
+	pkt = malloc(sizeof(*pkt));
+	if (!pkt) {
+		perror("malloc");
 		return -1;
 	}
 
+	pkt_len = prep_pkt_msg(pkt, cl_ctx->msg, len);
+	if (send(cl_ctx->tcp_fd, pkt, pkt_len, 0) < 0) {
+		perror("send");
+		free(pkt);
+		return -1;
+	}
+
+	free(pkt);
 	return 0;
 }
 
