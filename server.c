@@ -181,7 +181,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 
 	broadcast_join(srv_ctx, i, addr_str);
 
-	if (sync_history(srv_ctx, cs->fd) > 0)
+	if (sync_history(srv_ctx, cs->fd) < 0)
 		close_cl(srv_ctx, i);
 
 	return 0;
