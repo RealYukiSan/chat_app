@@ -68,7 +68,7 @@ static int create_server(void)
 	return fd;
 }
 
-static int broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, char addr_str[IP4_IDENTITY_SIZE])
+static void broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, char addr_str[IP4_IDENTITY_SIZE])
 {
 	struct packet *pkt;
 
@@ -83,8 +83,6 @@ static int broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, char addr_st
 
 		send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0);
 	}
-	
-	return 0;
 }
 
 static const char *stringify_ipv4(struct sockaddr_in *addr)
@@ -93,6 +91,12 @@ static const char *stringify_ipv4(struct sockaddr_in *addr)
 	inet_ntop(AF_INET, &addr->sin_addr, buf, INET_ADDRSTRLEN);
 	sprintf(buf + strlen(buf), ":%hu", ntohs(addr->sin_port));
 	return buf;
+}
+
+static void abort_db_corruption(size_t len, size_t exp_len, const char *desc)
+{
+	printf("The database is corrupted! (len != exp_len) %zu != %zu (%s)\n", len, exp_len, desc);
+	abort();
 }
 
 static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
@@ -118,12 +122,26 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 		len = fread(&pkt->msg_id, content_len, 1, srv_ctx->db);
 		if (!len)
 			break;
+		
+		/* cannot read the header, therefore indicating database corruption */
+		if (len != content_len)
+			abort_db_corruption(len, content_len, "fread");
 
 		msg_len = ntohs(pkt->msg_id.msg.len);
+		if (msg_len > MAX_SIZE_MSG)
+			abort_db_corruption(len, content_len, "msg len too large");
+
 		len = fread(&pkt->msg_id.msg.data, msg_len, 1, srv_ctx->db);
+		if (len != msg_len)
+			abort_db_corruption(len, content_len, "mismatch msg len");
+
 		pkt->len = htons(msg_len + sizeof(pkt->msg_id));
 		pkt->type = SR_PKT_MSG_ID;
-		send(cs_fd, pkt, HEADER_SIZE + msg_len + sizeof(pkt->msg_id), 0);
+		if (send(cs_fd, pkt, HEADER_SIZE + msg_len + sizeof(pkt->msg_id), 0) < 0) {
+			perror("send");
+			free(pkt);
+			return -1;
+		}
 	}
 
 	free(pkt);
@@ -155,7 +173,9 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	printf("New client connected from %s\n", addr_str);
 
 	broadcast_join(srv_ctx, i, addr_str);
-	sync_history(srv_ctx, cs->fd);
+
+	if (sync_history(srv_ctx, cs->fd) > 0)
+		close_cl(srv_ctx, i);
 
 	return 0;
 }
