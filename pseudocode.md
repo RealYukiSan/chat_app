@@ -281,7 +281,7 @@ Client disconnected
 
 But what caused the recv error to be triggered is still mysterious. maybe recv_len < expected len cause this error? see [the comment section on this commit](https://github.com/Reyuki-san/chat_app/blob/9441e97b14d010224d1b735540f614a0b1b6c049/client.c#L77)
 
-### Visualization overlaps on memmove
+### Visualization overlaps on `msg_id->msg.len = htons(msg_len_he);`
 
 ```
 +--------------------------------------+
