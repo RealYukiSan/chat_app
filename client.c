@@ -109,10 +109,12 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 		return 0;
 	}
 
-	if (cl_ctx->msg[len - 1] == '\n')
+	if (cl_ctx->msg[len - 1] == '\n') {
 		cl_ctx->msg[len - 1] = '\0';
+		len--;
+	}
 
-	if (process_user_input(cl_ctx, len) < 0)
+	if (process_user_input(cl_ctx, len++) < 0)
 		return -1;
 
 	cl_ctx->need_reload_prompt = true;
