@@ -114,7 +114,7 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 		len--;
 	}
 
-	if (process_user_input(cl_ctx, len++) < 0)
+	if (process_user_input(cl_ctx, len + 1) < 0)
 		return -1;
 
 	cl_ctx->need_reload_prompt = true;
