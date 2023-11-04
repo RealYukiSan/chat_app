@@ -284,6 +284,9 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	if (msg_len_he > MAX_SIZE_MSG)
 		return -1;
 
+	if (cs->pkt.msg.data[msg_len_he - 1] != '\0')
+		return -1;
+
 	printf("New message from %s = %s\n", stringify_ipv4(&cs->addr), cs->pkt.msg.data);
 
 	/**
@@ -295,9 +298,7 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	if (broadcast_msg(cs, srv_ctx, msg_len_he) < 0)
 		return -1;
 
-	store_msg(cs, srv_ctx->db);
-
-	return 0;
+	return store_msg(cs, srv_ctx->db);
 }
 
 static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
@@ -314,7 +315,8 @@ try_again:
 
 	switch (cs->pkt.type) {
 	case CL_PKT_MSG:
-		handle_cl_pkt_msg(cs, srv_ctx);
+		if (handle_cl_pkt_msg(cs, srv_ctx) < 0)
+			return -1;
 		break;
 
 	default:
