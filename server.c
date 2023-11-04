@@ -213,11 +213,31 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	return 0;
 }
 
+/* store it, just store the following information: msg, msg len, identity */
+static int store_msg(struct packet *pkt, FILE *fd)
+{
+	size_t write_len;
+
+	write_len = ntohs(pkt->msg_id.msg.len) + sizeof(pkt->msg_id);
+
+	clearerr(fd);
+	fseek(fd, 0, SEEK_END);
+	fwrite(&pkt->msg_id, write_len, 1, fd);
+	if (ferror(fd)) {
+		perror("fwrite");
+		return -1;
+	}
+
+	fflush(fd);
+	return 0;
+}
+
 static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, size_t msg_len_he)
 {
 	struct packet *pkt;
 	struct packet_msg_id *msg_id;
 	size_t body_len;
+	int ret;
 
 	pkt = malloc(sizeof(*pkt));
 	if (!pkt) {
@@ -245,29 +265,11 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 		}
 	}
 
-	memcpy(&cs->pkt, pkt, HEADER_SIZE + body_len);
+	ret = store_msg(pkt, srv_ctx->db);
+
 	free(pkt);
 
-	return 0;
-}
-
-/* store it, just store the following information: msg, msg len, identity */
-static int store_msg(struct client_state *cs, FILE *fd)
-{
-	size_t write_len;
-
-	write_len = ntohs(cs->pkt.msg_id.msg.len) + sizeof(cs->pkt.msg_id);
-
-	clearerr(fd);
-	fseek(fd, 0, SEEK_END);
-	fwrite(&cs->pkt.msg_id, write_len, 1, fd);
-	if (ferror(fd)) {
-		perror("fwrite");
-		return -1;
-	}
-
-	fflush(fd);
-	return 0;
+	return ret;
 }
 
 static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx)
@@ -290,10 +292,7 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	 * 		- melakukan broadcast ke client yang terhubung
 	 * 		- menyimpan pesan kedalam record yang ada di db history
 	*/
-	if (broadcast_msg(cs, srv_ctx, msg_len_he) < 0)
-		return -1;
-
-	return store_msg(cs, srv_ctx->db);
+	return broadcast_msg(cs, srv_ctx, msg_len_he);
 }
 
 static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
