@@ -231,13 +231,6 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 	pkt->len = htons(body_len);
 	msg_id->msg.len = htons(msg_len_he);
 
-	/**
-	 * > https://t.me/GNUWeeb/854582
-	 * kayaknya ini tu unreachable yah bugnya?
-	 * soalnya kalo ku coba set msg_len_he nya lebih besar dari sizeof(__raw_buf) clienya malah kena error recv: Connection reset by peer
-	 * udah di-prevent juga biar msg_len_he nya gak lebih dari semestinya di bagian server.c:290
-	 * kalau recv_lennya < expected_len nya kan otomatis ditolak
-	*/
 	memmove(&msg_id->msg.data, &cs->pkt.msg.data, msg_len_he);
 	memcpy(&msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
 
@@ -247,6 +240,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 
 		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
 			perror("send");
+			free(pkt);
 			return -1;
 		}
 	}
@@ -264,6 +258,7 @@ static int store_msg(struct client_state *cs, FILE *fd)
 
 	write_len = ntohs(cs->pkt.msg_id.msg.len) + sizeof(cs->pkt.msg_id);
 
+	clearerr(fd);
 	fseek(fd, 0, SEEK_END);
 	fwrite(&cs->pkt.msg_id, write_len, 1, fd);
 	if (ferror(fd)) {
