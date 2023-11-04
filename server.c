@@ -95,7 +95,7 @@ static const char *stringify_ipv4(struct sockaddr_in *addr)
 
 static void abort_db_corruption(size_t len, size_t exp_len, const char *desc)
 {
-	printf("The database is corrupted! (len != exp_len) %zu != %zu (%s)\n", len, exp_len, desc);
+	printf("The database is corrupted! %zu != %zu (%s)\n", len, exp_len, desc);
 	abort();
 }
 
@@ -119,7 +119,7 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 		size_t len;
 		size_t msg_len;
 
-		len = fread(&pkt->msg_id, content_len, 1, srv_ctx->db);
+		len = fread(&pkt->msg_id, 1, content_len, srv_ctx->db);
 		if (!len)
 			break;
 		
@@ -131,7 +131,7 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 		if (msg_len > MAX_SIZE_MSG)
 			abort_db_corruption(len, content_len, "msg len too large");
 
-		len = fread(&pkt->msg_id.msg.data, msg_len, 1, srv_ctx->db);
+		len = fread(&pkt->msg_id.msg.data, 1, msg_len, srv_ctx->db);
 		if (len != msg_len)
 			abort_db_corruption(len, content_len, "mismatch msg len");
 
@@ -146,6 +146,13 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 
 	free(pkt);
 	return 0;
+}
+
+static void close_cl(struct server_ctx *srv_ctx, int idx)
+{
+	close(srv_ctx->fds[idx + 1].fd);
+	srv_ctx->fds[idx + 1].fd = -1;
+	srv_ctx->clients[idx].fd = -1;
 }
 
 static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_ctx)
@@ -288,13 +295,6 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 	store_msg(cs, srv_ctx->db);
 
 	return 0;
-}
-
-static void close_cl(struct server_ctx *srv_ctx, int idx)
-{
-	close(srv_ctx->fds[idx + 1].fd);
-	srv_ctx->fds[idx + 1].fd = -1;
-	srv_ctx->clients[idx].fd = -1;
 }
 
 static int process_cl_pkt(struct client_state *cs, struct server_ctx *srv_ctx)
