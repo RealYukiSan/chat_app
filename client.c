@@ -72,7 +72,10 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 	pkt->msg.len = htons(len);
 	pkt->len = htons(body_len);
 	strcpy(pkt->msg.data, cl_ctx->msg);
-	send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0);
+	if (send(cl_ctx->tcp_fd, pkt, HEADER_SIZE + body_len, 0) < 0) {
+		perror("send");
+		return -1;
+	}
 
 	return 0;
 }
@@ -88,22 +91,11 @@ static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 		return 0;
 	}
 
-	if (send_message(cl_ctx, len) < 0)
-		return -1;
-
-	return 0;
+	return send_message(cl_ctx, len);
 }
 
 static int handle_user_input(struct client_ctx *cl_ctx)
 {
-	/**
-	 * TODO:
-	 * 	sebelum mengirim:
-	 * 		- membaca pesan dari input terminal melalui stdin
-	 * 		- mempersiapkan paket yang akan dikirim
-	 * 	mengirim pesan ke server
-	*/
-
 	size_t len;
 
 	if (!fgets(cl_ctx->msg, sizeof(cl_ctx->msg), stdin))
@@ -129,18 +121,19 @@ static int handle_user_input(struct client_ctx *cl_ctx)
 static int process_srv_packet(struct client_ctx *cl_ctx)
 {
 	size_t expected_len;
-
+	
 try_again:
-	expected_len = ntohs(cl_ctx->pkt.len) + HEADER_SIZE;
 	if (cl_ctx->recv_len < HEADER_SIZE)
 		return 0;
+
+	expected_len = ntohs(cl_ctx->pkt.len) + HEADER_SIZE;
 
 	if (cl_ctx->recv_len < expected_len)
 		return 0;
 
 	switch (cl_ctx->pkt.type) {
 	case SR_PKT_LEAVE:
-		printf("\r%s leave the server\n", cl_ctx->pkt.event.identity);
+		printf("\r%s left the server\n", cl_ctx->pkt.event.identity);
 		break;
 	case SR_PKT_JOIN:
 		printf("\r%s joined the server\n", cl_ctx->pkt.event.identity);
@@ -150,7 +143,8 @@ try_again:
 		break;
 
 	default:
-		break;
+		printf("Invalid packet %hhu\n", cl_ctx->pkt.type);
+		return -1;
 	}
 
 	cl_ctx->recv_len -= expected_len;
@@ -165,28 +159,40 @@ try_again:
 	return 0;
 }
 
+static int handle_server(struct client_ctx *cl_ctx)
+{
+	char *buf;
+	ssize_t ret;
+
+	buf = (char *)&cl_ctx->pkt + cl_ctx->recv_len;
+	ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt) - cl_ctx->recv_len, MSG_DONTWAIT);
+	if (ret < 0) {
+		if (errno == EAGAIN || errno == EINTR)
+			return 0;
+
+		perror("recv");
+		return -1;
+	}
+
+	if (ret == 0) {
+		printf("\nServer disconnected\n");
+		return -1;
+	}
+	
+	cl_ctx->recv_len += ret;
+	if (process_srv_packet(cl_ctx) < 0)
+		return -1;
+
+	cl_ctx->need_reload_prompt = true;
+
+	return 0;
+}
+
 static int handle_events(struct client_ctx *cl_ctx)
 {
 	if (cl_ctx->fds[0].revents & POLLIN) {
-		char *buf;
-		int ret;
-
-		buf = (char *)&cl_ctx->pkt + cl_ctx->recv_len;
-		ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt), MSG_DONTWAIT);
-		if (ret < 0) {
-			perror("recv");
+		if (handle_server(cl_ctx) < 0)
 			return -1;
-		}
-
-		if (ret == 0) {
-			printf("\nServer disconnected\n");
-			return -1;
-		}
-		
-		cl_ctx->recv_len += ret;
-		process_srv_packet(cl_ctx);
-
-		cl_ctx->need_reload_prompt = true;
 	}
 
 	if (cl_ctx->fds[1].revents & POLLIN) {
@@ -248,6 +254,7 @@ int main(void)
 		return -1;
 
 	start_event_loop(&cl_ctx);
+	close(cl_ctx.tcp_fd);
 
 	return 0;
 }
