@@ -68,6 +68,13 @@ static int create_server(void)
 	return fd;
 }
 
+static void close_cl(struct server_ctx *srv_ctx, size_t idx)
+{
+	close(srv_ctx->fds[idx + 1].fd);
+	srv_ctx->fds[idx + 1].fd = -1;
+	srv_ctx->clients[idx].fd = -1;
+}
+
 static void broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, const char *addr_str)
 {
 	struct packet *pkt;
@@ -147,13 +154,6 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 
 	free(pkt);
 	return 0;
-}
-
-static void close_cl(struct server_ctx *srv_ctx, size_t idx)
-{
-	close(srv_ctx->fds[idx + 1].fd);
-	srv_ctx->fds[idx + 1].fd = -1;
-	srv_ctx->clients[idx].fd = -1;
 }
 
 static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_ctx)
