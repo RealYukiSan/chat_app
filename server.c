@@ -148,7 +148,7 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 	return 0;
 }
 
-static void close_cl(struct server_ctx *srv_ctx, int idx)
+static void close_cl(struct server_ctx *srv_ctx, size_t idx)
 {
 	close(srv_ctx->fds[idx + 1].fd);
 	srv_ctx->fds[idx + 1].fd = -1;
@@ -286,12 +286,6 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 
 	printf("New message from %s = %s\n", stringify_ipv4(&cs->addr), cs->pkt.msg.data);
 
-	/**
-	 * TODO:
-	 * 	setelah mentransform dan menampilkan pesannya:
-	 * 		- melakukan broadcast ke client yang terhubung
-	 * 		- menyimpan pesan kedalam record yang ada di db history
-	*/
 	return broadcast_msg(cs, srv_ctx, msg_len_he);
 }
 
@@ -337,6 +331,26 @@ try_again:
 	return 0;
 }
 
+static int broadcast_leave(struct server_ctx *srv_ctx, struct client_state *cs)
+{
+	struct packet *pkt;
+
+	pkt = &cs->pkt;
+	pkt->len = htons(IP4_IDENTITY_SIZE);
+	pkt->type = SR_PKT_LEAVE;
+	memcpy(pkt->event.identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
+
+	for (size_t i = 0; i < NR_CLIENT; i++) {
+		if (cs == &srv_ctx->clients[i] || srv_ctx->clients[i].fd < 0)
+			continue;
+
+		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0) < 0)
+			close_cl(srv_ctx, i);
+	}
+
+	return 0;
+}
+
 static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 {
 	ssize_t ret;
@@ -357,21 +371,9 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 
 	if (ret == 0) {
 		printf("Client disconnected\n");
-		struct packet *pkt;
-
-		pkt = &cs->pkt;
-		pkt->len = htons(IP4_IDENTITY_SIZE);
-		pkt->type = SR_PKT_LEAVE;
-		memcpy(pkt->event.identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
-
-		for (size_t i = 0; i < NR_CLIENT; i++) {
-			if (i == id_client || srv_ctx->clients[i].fd < 0)
-				continue;
-
-			send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0);
-		}
-
 		close_cl(srv_ctx, id_client);
+		broadcast_leave(srv_ctx, cs);
+		
 		return 0;
 	}
 
