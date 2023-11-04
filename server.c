@@ -281,6 +281,9 @@ static int handle_cl_pkt_msg(struct client_state *cs, struct server_ctx *srv_ctx
 
 	msg_len_he = ntohs(cs->pkt.msg.len);
 
+	if (msg_len_he > MAX_SIZE_MSG)
+		return -1;
+
 	printf("New message from %s = %s\n", stringify_ipv4(&cs->addr), cs->pkt.msg.data);
 
 	/**
