@@ -68,20 +68,21 @@ static int create_server(void)
 	return fd;
 }
 
-static void broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, char addr_str[IP4_IDENTITY_SIZE])
+static void broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, const char *addr_str)
 {
 	struct packet *pkt;
 
 	pkt = &srv_ctx->clients[idx].pkt;
 	pkt->type = SR_PKT_JOIN;
-	pkt->len = htons(IP4_IDENTITY_SIZE);
-	memcpy(&pkt->event.identity, addr_str, IP4_IDENTITY_SIZE);
+	pkt->len = htons(sizeof(pkt->event));
+	strncpy(pkt->event.identity, addr_str, sizeof(pkt->event.identity));
 
 	for (uint32_t i = 0; i < NR_CLIENT; i++) {
 		if (idx == i || srv_ctx->clients[i].fd < 0)
 			continue;
 
-		send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0);
+		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + sizeof(pkt->event), 0) < 0)
+			close_cl(srv_ctx, idx);
 	}
 }
 
@@ -158,7 +159,7 @@ static void close_cl(struct server_ctx *srv_ctx, size_t idx)
 static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_ctx)
 {
 	struct client_state *cs = NULL;
-	char addr_str[IP4_IDENTITY_SIZE];
+	const char *addr_str;
 	uint32_t i;
 
 	for (i = 0; i < NR_CLIENT; i++) {
@@ -176,7 +177,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	srv_ctx->fds[i + 1].fd = fd;
 	srv_ctx->fds[i + 1].events = POLLIN;
 
-	memcpy(addr_str, stringify_ipv4(&addr), IP4_IDENTITY_SIZE);
+	addr_str = stringify_ipv4(&addr);
 	printf("New client connected from %s\n", addr_str);
 
 	broadcast_join(srv_ctx, i, addr_str);
@@ -252,7 +253,7 @@ static int broadcast_msg(struct client_state *cs, struct server_ctx *srv_ctx, si
 	msg_id->msg.len = htons(msg_len_he);
 
 	memmove(&msg_id->msg.data, &cs->pkt.msg.data, msg_len_he);
-	memcpy(&msg_id->identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
+	strncpy(msg_id->identity, stringify_ipv4(&cs->addr), sizeof(msg_id->identity));
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (cs->fd == srv_ctx->clients[i].fd || srv_ctx->clients[i].fd < 0)
@@ -336,9 +337,9 @@ static int broadcast_leave(struct server_ctx *srv_ctx, struct client_state *cs)
 	struct packet *pkt;
 
 	pkt = &cs->pkt;
-	pkt->len = htons(IP4_IDENTITY_SIZE);
+	pkt->len = htons(sizeof(pkt->event));
 	pkt->type = SR_PKT_LEAVE;
-	memcpy(pkt->event.identity, stringify_ipv4(&cs->addr), IP4_IDENTITY_SIZE);
+	strncpy(pkt->event.identity, stringify_ipv4(&cs->addr), sizeof(pkt->event.identity));
 
 	for (size_t i = 0; i < NR_CLIENT; i++) {
 		if (cs == &srv_ctx->clients[i] || srv_ctx->clients[i].fd < 0)
@@ -371,15 +372,14 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 
 	if (ret == 0) {
 		printf("Client disconnected\n");
-		close_cl(srv_ctx, id_client);
 		broadcast_leave(srv_ctx, cs);
 		
-		return 0;
+		return -1;
 	}
 
 	cs->recv_len += ret;
 	if (process_cl_pkt(cs, srv_ctx) < 0)
-		close_cl(srv_ctx, id_client);
+		return -1;
 
 	return 0;
 }
@@ -399,7 +399,7 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 
 		if (srv_ctx->fds[i].revents & POLLIN) {
 			if (handle_event(srv_ctx, i - 1) < 0)
-				return -1;
+				close_cl(srv_ctx, i - 1);
 			nr_event--;
 		}
 	}
@@ -415,6 +415,9 @@ static void start_event_loop(struct server_ctx *srv_ctx)
 		ret = poll(srv_ctx->fds, NR_CLIENT + 1, -1);
 
 		if (ret < 0) {
+			if (errno == EINTR)
+				continue;
+
 			perror("poll");
 			break;
 		}
@@ -462,6 +465,8 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 		/* if something still goes wrong, raise/throw an error */
 		if (!srv_ctx->db) {
 			perror("fopen");
+			close(srv_ctx->tcp_fd);
+			free(srv_ctx->fds);
 			return -1;
 		}
 		printf("Create new database file...\n");
@@ -476,6 +481,7 @@ static void clean_ctx(struct server_ctx *srv_ctx)
 {
 	free(srv_ctx->fds);
 	free(srv_ctx->clients);
+	fclose(srv_ctx->db);
 	close(srv_ctx->tcp_fd);
 }
 
