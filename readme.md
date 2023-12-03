@@ -14,7 +14,7 @@
 - setiap protokol seperti (IP_ICMP) mempunyai struktur data, fungsionalitas dan usecase masing-masing
 - man 2 untuk syscall, man 3 untuk library, lihat lengkapnya pada command `man man`
 - endian = bytes order, tidak digunakan untuk single byte
-- network always use big endian
+- network always use big endian, see [network byte ordering rfc 1700](https://en.wikipedia.org/wiki/Endianness#Networking), and [the note](https://t.me/c/1987506309/1354)
 
 ### Useful tools and technique
 - raw tcp client: nc program
@@ -65,6 +65,8 @@ Diagram that shows variant of I/O device:
 ![I/O Example](https://i.stack.imgur.com/mcw90.jpg)
 
 image from: [What does "address space" means when talking about IO devices?](https://softwareengineering.stackexchange.com/questions/359297/what-does-address-space-means-when-talking-about-io-devices)
+
+also see the File descriptor from [wikipedia](https://en.wikipedia.org/wiki/File_descriptor) and [the Linux_System_Programming-man7 book](https://t.me/GNUWeeb/869147) page 3-4
 
 ### A few terms to note:
 - buffer: some data that was held somewhere in memory
