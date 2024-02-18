@@ -1,6 +1,8 @@
+android/**/out
 client
 server
 *.o
+*.out
 .vscode/
 *.bin
 *.log

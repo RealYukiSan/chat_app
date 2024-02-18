@@ -1,6 +1,7 @@
 #ifndef PACKET_H
 #define PACKET_H
 
+#include <string.h>
 #include <stdint.h>
 #include <arpa/inet.h>
 

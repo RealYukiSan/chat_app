@@ -16,6 +16,6 @@ client: client.o
 server: server.o
 
 clean:
-	rm -vf client server *.o
+	rm -vf client server *.o *.db
 
 .PHONY: all clean
