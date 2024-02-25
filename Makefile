@@ -2,6 +2,7 @@
 
 # https://t.me/GNUWeeb/854603 and https://gcc.gnu.org/legacy-ml/gcc-help/2009-02/msg00130.html
 CFLAGS = -Wall -Wextra -O2 -ggdb3
+# CFLAGS += -DSERVER_ADDR "0.0.0.0"
 
 all: client server
 
