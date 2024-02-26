@@ -1,9 +1,14 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#ifndef SERVER_PORT
 #define SERVER_PORT 8787
-#define SERVER_ADDR "192.168.18.74"
+#endif
 
-char *server_addr = SERVER_ADDR;
+#ifndef SERVER_ADDR
+#define SERVER_ADDR "0.0.0.0"
+#endif
+
+extern const char *server_addr;
 
 #endif

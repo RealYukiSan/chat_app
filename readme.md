@@ -9,7 +9,8 @@
 **and other members on [GNU/Weeb](https://www.gnuweeb.org/)!**
 
 ### A few note
-
+- [good article](https://makefiletutorial.com/) about make and Makefile script
+- use `SERVER_ADDR=0.0.0.0 make` to override default server address, [also](https://stackoverflow.com/a/26213410/22382954)
 - sock_stream sock_dgram sock_raw is a part of network socket types
 - setiap protokol seperti (IP_ICMP) mempunyai struktur data, fungsionalitas dan usecase masing-masing
 - man 2 untuk syscall, man 3 untuk library, lihat lengkapnya pada command `man man`
