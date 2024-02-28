@@ -283,7 +283,7 @@ static int initialize_ctx(struct client_ctx *cl_ctx)
 	cl_ctx->fds[0].events = POLLIN;
 
 	cl_ctx->fds[1].fd = _fileno(stdin);
-	cl_ctx->fds[1].events = POLLRDNORM;
+	cl_ctx->fds[1].events = POLLIN;
 
 	cl_ctx->recv_len = 0;
 	memset(&cl_ctx->pkt, 0, sizeof(cl_ctx->pkt));
