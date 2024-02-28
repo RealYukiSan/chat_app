@@ -9,6 +9,7 @@
 **and other members on [GNU/Weeb](https://www.gnuweeb.org/)!**
 
 ### A few note
+- TIL windows cannot connect to 0.0.0.0 while linux can do it, on windows, address 0.0.0.0 only useful for listen on all interface 
 - [good article](https://makefiletutorial.com/) about make and Makefile script
 - use `SERVER_ADDR=0.0.0.0 make` to override default server address, [also](https://stackoverflow.com/a/26213410/22382954)
 - sock_stream sock_dgram sock_raw is a part of network socket types

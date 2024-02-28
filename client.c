@@ -1,10 +1,17 @@
 #include <errno.h>
 #include <stdlib.h>
+
+#ifndef _WIN32
 #include <poll.h>
-#include <stdio.h>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#else
+#include <winsock2.h>
+#endif
+
+#include <stdio.h>
+#include <unistd.h>
+
 #include <string.h>
 #include <stdbool.h>
 
@@ -41,9 +48,15 @@ static int connect_server(void)
 	inet_pton(AF_INET, server_addr, &addr.sin_addr);
 	addr.sin_port = htons(SERVER_PORT);
 	addr.sin_family = AF_INET;
-	
+
 	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		#ifndef _WIN32
 		perror("connect");
+		#else
+		// possible error: https://learn.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2
+		printf("connect: %d\n", WSAGetLastError());
+		#endif
+
 		close(fd);
 		return -1;
 	}
@@ -166,9 +179,16 @@ static int handle_server(struct client_ctx *cl_ctx)
 {
 	char *buf;
 	ssize_t ret;
+	unsigned int flag;
+
+	#ifndef _WIN32
+	flag = MSG_DONTWAIT;
+	#else
+	flag = 0;
+	#endif
 
 	buf = (char *)&cl_ctx->pkt + cl_ctx->recv_len;
-	ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt) - cl_ctx->recv_len, MSG_DONTWAIT);
+	ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt) - cl_ctx->recv_len, flag);
 	if (ret < 0) {
 		if (errno == EAGAIN || errno == EINTR)
 			return 0;
@@ -218,7 +238,12 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 			cl_ctx->need_reload_prompt = false;
 		}
 
+		#ifndef __WIN32
 		nr_ready = poll(cl_ctx->fds, 2, -1);
+		#else
+		// TODO: fix the poll bug on windows
+		nr_ready = WSAPoll(cl_ctx->fds, 2, -1);
+		#endif
 		if (nr_ready < 0) {
 			if (errno == EINTR)
 				continue;
@@ -234,15 +259,31 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 
 static int initialize_ctx(struct client_ctx *cl_ctx)
 {
+	#ifdef _WIN32
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2) {
+		/* Tell the user that we could not find a usable */
+		/* WinSock DLL.                                  */
+		printf("Could not find a usable version of Winsock.dll\n");
+		WSACleanup();
+		return 1;
+	} else
+		printf("The Winsock 2.2 dll was found okay\n");
+	#endif
+
 	cl_ctx->tcp_fd = connect_server();
 	if (cl_ctx->tcp_fd < 0)
 		return -1;
 
+	printf("Successfuly connected to %s:%d\n", SERVER_ADDR, SERVER_PORT);
+
 	cl_ctx->fds[0].fd = cl_ctx->tcp_fd;
 	cl_ctx->fds[0].events = POLLIN;
 
-	cl_ctx->fds[1].fd = STDIN_FILENO;
-	cl_ctx->fds[1].events = POLLIN;
+	cl_ctx->fds[1].fd = _fileno(stdin);
+	cl_ctx->fds[1].events = POLLRDNORM;
 
 	cl_ctx->recv_len = 0;
 	memset(&cl_ctx->pkt, 0, sizeof(cl_ctx->pkt));
@@ -258,6 +299,7 @@ int main(void)
 
 	start_event_loop(&cl_ctx);
 	close(cl_ctx.tcp_fd);
+	WSACleanup();
 
 	return 0;
 }

@@ -6,7 +6,7 @@
 #endif
 
 #ifndef SERVER_ADDR
-#define SERVER_ADDR "0.0.0.0"
+#define SERVER_ADDR "127.0.0.1"
 #endif
 
 extern const char *server_addr;

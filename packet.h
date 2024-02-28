@@ -3,7 +3,13 @@
 
 #include <string.h>
 #include <stdint.h>
+
+#ifndef _WIN32
 #include <arpa/inet.h>
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 
 #ifndef __packed
 #define __packed __attribute__((__packed__))

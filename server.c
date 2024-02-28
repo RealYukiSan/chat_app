@@ -4,9 +4,15 @@
 
 #include <stddef.h>
 #include <errno.h>
+
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <sys/poll.h>
 #include <arpa/inet.h>
+#else
+#include <winsock2.h>
+#endif
+
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -22,7 +28,6 @@ static const char db_file_name[] = "chat_history.db";
 struct client_state {
 	int 			fd;
 	struct sockaddr_in 	addr;
-	// todo: remove the pkt member
 	struct packet 		pkt;
 	size_t			recv_len;
 };
@@ -38,15 +43,26 @@ static int create_server(void)
 {
 	int fd;
 	struct sockaddr_in addr;
+	int type;
 
-	fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	#ifndef _WIN32
+	type = SOCK_STREAM | SOCK_NONBLOCK;
+	#else
+	type = SOCK_STREAM;
+	#endif
+
+	fd = socket(AF_INET, type, 0);
 	if (fd < 0) {
 		perror("socket");
 		return -1;
 	}
 
-	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
-	setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof(int));
+	#ifdef _WIN32
+	u_long mode = 1;
+	ioctlsocket(fd, FIONBIO, &mode);
+	#endif
+
+	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(const char){1}, sizeof(int));
 
 	memset(&addr, 0, sizeof(addr));
 	inet_pton(AF_INET, server_addr, &addr.sin_addr);
@@ -205,11 +221,20 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	int fd;
 
 	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&addr, &addr_len);
+	#ifdef _WIN32
+	u_long mode = 1;
+	ioctlsocket(fd, FIONBIO, &mode);
+	#endif
 
 	if (fd < 0) {
 		int ret = errno;
 		if (ret == EINTR || ret == EAGAIN)
 			return 0;
+
+		#ifdef __WIN32
+		if (WSAGetLastError() == WSAEWOULDBLOCK)
+			return 0;
+		#endif
 
 		perror("accept");
 		return -1;
@@ -363,9 +388,16 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 	struct client_state *cs = &srv_ctx->clients[id_client];
 	/* raw buffer of packet struct */
 	char *buf;
+	unsigned int flag;
+
+	#ifndef _WIN32
+	flag = MSG_DONTWAIT;
+	#else
+	flag = 0;
+	#endif
 
 	buf = (char *)&cs->pkt + cs->recv_len;
-	ret = recv(cs->fd, buf, sizeof(cs->pkt) - cs->recv_len, MSG_DONTWAIT);
+	ret = recv(cs->fd, buf, sizeof(cs->pkt) - cs->recv_len, flag);
 	if (ret < 0) {
 		if (ret == EAGAIN || ret == EINTR)
 			return 0;
@@ -376,6 +408,7 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 	}
 
 	if (ret == 0) {
+		// TODO: find out why the event on disconnect not dispatched
 		printf("Client disconnected\n");
 		broadcast_leave(srv_ctx, cs);
 		
@@ -417,7 +450,11 @@ static void start_event_loop(struct server_ctx *srv_ctx)
 	int ret;
 
 	while (1) {
+		#ifndef __WIN32
 		ret = poll(srv_ctx->fds, NR_CLIENT + 1, -1);
+		#else
+		ret = WSAPoll(srv_ctx->fds, NR_CLIENT + 1, -1);
+		#endif
 
 		if (ret < 0) {
 			if (errno == EINTR)
@@ -434,6 +471,20 @@ static void start_event_loop(struct server_ctx *srv_ctx)
 
 static int initialize_ctx(struct server_ctx *srv_ctx)
 {
+	#ifdef _WIN32
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2) {
+		/* Tell the user that we could not find a usable */
+		/* WinSock DLL.                                  */
+		printf("Could not find a usable version of Winsock.dll\n");
+		WSACleanup();
+		return 1;
+	} else
+		printf("The Winsock 2.2 dll was found okay\n");
+	#endif
+
 	srv_ctx->tcp_fd = create_server();
 	if (srv_ctx->tcp_fd < 0)
 		return -1;
@@ -485,6 +536,9 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 
 static void clean_ctx(struct server_ctx *srv_ctx)
 {
+	#ifdef _WIN32
+	WSACleanup();
+	#endif
 	free(srv_ctx->fds);
 	free(srv_ctx->clients);
 	fclose(srv_ctx->db);

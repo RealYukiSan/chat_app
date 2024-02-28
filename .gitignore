@@ -3,6 +3,7 @@ client
 server
 *.o
 *.out
+*.exe
 .vscode/
 *.bin
 *.log

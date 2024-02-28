@@ -2,6 +2,7 @@
 
 # https://t.me/GNUWeeb/854603 and https://gcc.gnu.org/legacy-ml/gcc-help/2009-02/msg00130.html
 CFLAGS := -Wall -Wextra -O2 -ggdb3
+LDFLAGS := -lws2_32
 
 ifdef SERVER_ADDR
 CFLAGS += -DSERVER_ADDR=\"$(SERVER_ADDR)\"
@@ -19,8 +20,10 @@ util.o: util.c util.h
 client.o: client.c $(HDR)
 server.o: server.c $(HDR)
 
-client: util.o client.o 
+client: util.o client.o
+	$(CC) util.o client.o -o $@ $(LDFLAGS)
 server: util.o server.o
+	$(CC) util.o server.o -o $@ $(LDFLAGS)
 
 clean:
 	rm -vf client server *.o *.db
