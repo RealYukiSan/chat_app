@@ -220,7 +220,6 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	if (!cs)
 		return -1;
 
-	printf("plug_client: %d\n", fd);
 	cs->fd = fd;
 	cs->addr = addr;
 	srv_ctx->fds[i + 1].fd = fd;
@@ -246,6 +245,7 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	int fd;
 
 	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&addr, &addr_len);
+	printf("fd on accept: %d\n", fd);
 	#ifdef _WIN32
 	u_long mode = 1;
 	ioctlsocket(fd, FIONBIO, &mode);
@@ -439,6 +439,7 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 	#endif
 
 	buf = (char *)&cs->pkt + cs->recv_len;
+	printf("fd on recv: %d\n", cs->fd);
 	ret = recv(cs->fd, buf, sizeof(cs->pkt) - cs->recv_len, flag);
 	if (ret < 0) {
 		#ifdef __WIN32
@@ -452,11 +453,11 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 		return -1;
 	}
 
-	printf("the ret == 0 never matched: %lld\n", ret);
 	if (ret == 0) {
 		// TODO: find out why the event on disconnect not dispatched
 		// it seems the WSAPoll function cannot recognize disconnected client and won't be able to notify us
 		// https://github.com/pocoproject/poco/issues/3248
+		// SOLVED: ret == 0 on windows moved to if condition POLLHUP
 		printf("Client disconnected\n");
 		broadcast_leave(srv_ctx, cs);
 
@@ -483,6 +484,15 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 		if (nr_event == 0)
 			break;
 
+		#ifdef _WIN32
+		if (srv_ctx->fds[i].revents & POLLHUP) {
+			printf("Client disconnected\n");
+			broadcast_leave(srv_ctx, &srv_ctx->clients[i - 1]);
+			close_cl(srv_ctx, i - 1);
+			nr_event--;			
+		}
+		#endif
+
 		if (srv_ctx->fds[i].revents & POLLIN) {
 			if (handle_event(srv_ctx, i - 1) < 0)
 				close_cl(srv_ctx, i - 1);
@@ -502,7 +512,7 @@ static void start_event_loop(struct server_ctx *srv_ctx)
 		#ifndef __WIN32
 		ret = poll(srv_ctx->fds, NR_CLIENT + 1, -1);
 		#else
-		ret = WSAPoll(srv_ctx->fds, NR_CLIENT + 1, -1);
+		ret = WSAPoll(srv_ctx->fds, NR_CLIENT + 1, INFINITE);
 		#endif
 
 		if (ret < 0) {
