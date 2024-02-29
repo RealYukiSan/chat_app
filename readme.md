@@ -11,7 +11,7 @@
 ### A few note
 - So far, this program not stable and won't work properly on windows platform, known issue are:
   - [server] WSAPoll not notify or dispatch event on client disconnect - fixed on this [commit](https://github.com/RealYukiSan/chat_app/commit/8df8c5f5242b3951c208db6a4108c98437340412)
-  - [server] excees padding on the reply packet from server to client
+  - [server] excees padding on the reply packet from server to client - fixed on this [commit]
   - [client] WaitForMultipleObjects never response to recv from file descriptor tcp socket
 - [I/O Multiplexing](https://notes.shichao.io/unp/ch6)
 - TIL windows cannot connect to 0.0.0.0 while linux can do it, on windows, address 0.0.0.0 only useful for listen on all interface 

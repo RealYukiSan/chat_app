@@ -17,6 +17,8 @@
 
 #define MAX_SIZE_MSG 4096
 #define HEADER_SIZE 4
+#undef INET_ADDRSTRLEN
+#define INET_ADDRSTRLEN 16
 #define IP4_IDENTITY_SIZE INET_ADDRSTRLEN + sizeof(":65535")
 
 enum {
