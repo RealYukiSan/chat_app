@@ -71,13 +71,21 @@ static int create_server(void)
 
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("bind");
+		#ifdef _WIN32
+		closesocket(fd);
+		#else
 		close(fd);
+		#endif
 		return -1;
 	}
 
 	if (listen(fd, NR_CLIENT) < 0) {
 		perror("listen");
+		#ifdef _WIN32
+		closesocket(fd);
+		#else
 		close(fd);
+		#endif
 		return -1;
 	}
 
@@ -87,7 +95,11 @@ static int create_server(void)
 
 static void close_cl(struct server_ctx *srv_ctx, size_t idx)
 {
+	#ifdef _WIN32
+	closesocket(srv_ctx->fds[idx + 1].fd);
+	#else
 	close(srv_ctx->fds[idx + 1].fd);
+	#endif
 	srv_ctx->fds[idx + 1].fd = -1;
 	srv_ctx->clients[idx].fd = -1;
 }
@@ -242,7 +254,12 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 
 	if (plug_client(fd, addr, srv_ctx) < 0) {
 		printf("Client slot is full, dropping a new connection...\n");
+		
+		#ifdef _WIN32
+		closesocket(fd);
+		#else
 		close(fd);
+		#endif
 	}
 
 	return 0;
@@ -409,6 +426,8 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 
 	if (ret == 0) {
 		// TODO: find out why the event on disconnect not dispatched
+		// it seems the WSAPoll function cannot recognize disconnected client and won't be able to notify us
+		// https://github.com/pocoproject/poco/issues/3248
 		printf("Client disconnected\n");
 		broadcast_leave(srv_ctx, cs);
 		
@@ -448,6 +467,7 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 static void start_event_loop(struct server_ctx *srv_ctx)
 {
 	int ret;
+	printf("PID: %d\n", getpid());
 
 	while (1) {
 		#ifndef __WIN32
@@ -492,7 +512,11 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 	srv_ctx->fds = calloc(NR_CLIENT + 1, sizeof(*srv_ctx->fds));
 	if (!srv_ctx->fds) {
 		perror("calloc");
+		#ifdef _WIN32
+		closesocket(srv_ctx->tcp_fd);
+		#else
 		close(srv_ctx->tcp_fd);
+		#endif
 		return -1;
 	}
 
@@ -500,7 +524,11 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 	if (!srv_ctx->clients) {
 		perror("calloc");
 		free(srv_ctx->fds);
+		#ifdef _WIN32
+		closesocket(srv_ctx->tcp_fd);
+		#else
 		close(srv_ctx->tcp_fd);
+		#endif
 		return -1;
 	}
 
@@ -521,7 +549,11 @@ static int initialize_ctx(struct server_ctx *srv_ctx)
 		/* if something still goes wrong, raise/throw an error */
 		if (!srv_ctx->db) {
 			perror("fopen");
+			#ifdef _WIN32
+			closesocket(srv_ctx->tcp_fd);
+			#else
 			close(srv_ctx->tcp_fd);
+			#endif
 			free(srv_ctx->fds);
 			free(srv_ctx->clients);
 			return -1;
@@ -542,7 +574,11 @@ static void clean_ctx(struct server_ctx *srv_ctx)
 	free(srv_ctx->fds);
 	free(srv_ctx->clients);
 	fclose(srv_ctx->db);
+	#ifdef _WIN32
+	closesocket(srv_ctx->tcp_fd);
+	#else
 	close(srv_ctx->tcp_fd);
+	#endif
 }
 
 int main(void)

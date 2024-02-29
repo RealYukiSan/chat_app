@@ -38,6 +38,7 @@ static int connect_server(void)
 {
 	int fd;
 	struct sockaddr_in addr;
+
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		perror("socket");
@@ -57,7 +58,11 @@ static int connect_server(void)
 		printf("connect: %d\n", WSAGetLastError());
 		#endif
 
+		#ifdef _WIN32
+		closesocket(fd);
+		#else
 		close(fd);
+		#endif
 		return -1;
 	}
 
@@ -100,7 +105,11 @@ static int process_user_input(struct client_ctx *cl_ctx, size_t len)
 		return -1;
 
 	if (!strcmp(cl_ctx->msg, "clear")) {
+		#ifdef _WIN32
+		system("cls");
+		#else
 		printf("\ec");
+		#endif
 		fflush(stdout);
 		return 0;
 	}
@@ -211,8 +220,9 @@ static int handle_server(struct client_ctx *cl_ctx)
 	return 0;
 }
 
-static int handle_events(struct client_ctx *cl_ctx)
+static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
 {
+	#ifndef _WIN32
 	if (cl_ctx->fds[0].revents & POLLIN) {
 		if (handle_server(cl_ctx) < 0)
 			return -1;
@@ -222,6 +232,18 @@ static int handle_events(struct client_ctx *cl_ctx)
 		if (handle_user_input(cl_ctx) < 0)
 			return -1;
 	}
+	#else
+	__asm__("int3");
+	if (nr_ready == WAIT_OBJECT_0 + 1) {
+		if (handle_user_input(cl_ctx) < 0)
+			return -1;
+	}
+
+	if (nr_ready == WAIT_OBJECT_0) {
+		if (handle_server(cl_ctx) < 0)
+			return -1;
+	}
+	#endif
 
 	return 0;
 }
@@ -229,6 +251,7 @@ static int handle_events(struct client_ctx *cl_ctx)
 static void start_event_loop(struct client_ctx *cl_ctx)
 {
 	int nr_ready;
+	printf("Program ID: %d\n", getpid());
 
 	cl_ctx->need_reload_prompt = true;
 	while (1) {
@@ -242,8 +265,15 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 		nr_ready = poll(cl_ctx->fds, 2, -1);
 		#else
 		// TODO: fix the poll bug on windows
-		nr_ready = WSAPoll(cl_ctx->fds, 2, -1);
+		// nr_ready = WSAPoll(cl_ctx->fds, 2, -1);
+
+		HANDLE h[2];
+		h[0] = cl_ctx->fds[0].fd;
+		h[1] = GetStdHandle(STD_INPUT_HANDLE);
+		nr_ready = WaitForMultipleObjects(2, h, FALSE, INFINITE);
+		// printf("\nerror code: %d\nnr_ready = %d\n", WSAGetLastError(), nr_ready);
 		#endif
+
 		if (nr_ready < 0) {
 			if (errno == EINTR)
 				continue;
@@ -252,13 +282,15 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 			break;
 		}
 
-		if (handle_events(cl_ctx) < 0)
+		if (handle_events(cl_ctx, nr_ready) < 0)
 			break;
 	}
 }
 
 static int initialize_ctx(struct client_ctx *cl_ctx)
 {
+	struct sockaddr_in client_addr;
+	int len = sizeof(client_addr);
 	#ifdef _WIN32
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -279,6 +311,9 @@ static int initialize_ctx(struct client_ctx *cl_ctx)
 
 	printf("Successfuly connected to %s:%d\n", SERVER_ADDR, SERVER_PORT);
 
+	getsockname(cl_ctx->tcp_fd, &client_addr, &len);
+	printf("Client port: %d\n", ntohs(client_addr.sin_port));
+
 	cl_ctx->fds[0].fd = cl_ctx->tcp_fd;
 	cl_ctx->fds[0].events = POLLIN;
 
@@ -298,7 +333,11 @@ int main(void)
 		return -1;
 
 	start_event_loop(&cl_ctx);
+	#ifdef _WIN32
+	closesocket(cl_ctx.tcp_fd);
+	#else
 	close(cl_ctx.tcp_fd);
+	#endif
 	WSACleanup();
 
 	return 0;
