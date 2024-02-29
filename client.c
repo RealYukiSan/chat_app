@@ -265,9 +265,6 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 		#ifndef __WIN32
 		nr_ready = poll(cl_ctx->fds, 2, -1);
 		#else
-		// TODO: fix the poll bug on windows
-		// nr_ready = WSAPoll(cl_ctx->fds, 2, -1);
-
 		HANDLE h[2];
 		h[0] = cl_ctx->fds[0].fd;
 		h[1] = GetStdHandle(STD_INPUT_HANDLE);

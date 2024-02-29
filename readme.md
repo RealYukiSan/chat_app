@@ -1,4 +1,4 @@
-## Simple Chat on TCP socket with full-duplex communication
+## Simple Chat on TCP socket with full-duplex / multiplex communication
 
 **things that I marked with (?) indicate statements that I still have doubts about**
 
@@ -9,6 +9,7 @@
 **and other members on [GNU/Weeb](https://www.gnuweeb.org/)!**
 
 ### A few note
+- [I/O Multiplexing](https://notes.shichao.io/unp/ch6)
 - TIL windows cannot connect to 0.0.0.0 while linux can do it, on windows, address 0.0.0.0 only useful for listen on all interface 
 - [good article](https://makefiletutorial.com/) about make and Makefile script
 - use `SERVER_ADDR=0.0.0.0 make` to override default server address, [also](https://stackoverflow.com/a/26213410/22382954)
