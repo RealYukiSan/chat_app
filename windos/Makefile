@@ -12,11 +12,11 @@ endif
 all: client server
 
 util.o: ../util.c ../util.h
-	$(CC) ../util.c -c -o $@
+	$(CC) $(CFLAGS) ../util.c -c -o $@
 client.o: ../client.c ../packet.h
-	$(CC) ../client.c -c -o $@
+	$(CC) $(CFLAGS) ../client.c -c -o $@
 server.o: ../server.c ../packet.h
-	$(CC) ../server.c -c -o $@
+	$(CC) $(CFLAGS) ../server.c -c -o $@
 
 client: util.o client.o
 	$(CC) util.o client.o -o $@ $(LDFLAGS)
