@@ -25,18 +25,18 @@ endif
 
 all: create_dir $(DESTDIR)/client $(DESTDIR)/server
 
-HDR = ../util.h ../packet.h
-CLIENT = ../util.c ../client.c
-SERVER = ../util.c ../server.c
-
 create_dir:
 	@mkdir -p $(DESTDIR)
 
-$(DESTDIR)/client: $(HDR) $(CLIENT)
-	$(CC) -o $(DESTDIR)/client $(CLIENT)
+$(DESTDIR)/client.o: ../client.c ../packet.h
+$(DESTDIR)/server.o: ../server.c ../packet.h
+$(DESTDIR)/util.o: ../util.c ../util.h
 
-$(DESTDIR)/server: $(HDR) $(SERVER)
-	$(CC) -o $(DESTDIR)/server $(SERVER)
+$(DESTDIR)/client: util.o client.o
+	$(CC) $^ -o $@
+
+$(DESTDIR)/server: util.o server.o
+	$(CC) $^ -o $@
 
 clean:
 	rm -vfr $(DESTDIR)

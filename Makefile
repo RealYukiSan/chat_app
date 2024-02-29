@@ -11,13 +11,11 @@ ifdef SERVER_PORT
 CFLAGS += -DSERVER_PORT=$(SERVER_PORT)
 endif
 
-HDR = packet.h util.h
-
 all: client server
 
 util.o: util.c util.h
-client.o: client.c $(HDR)
-server.o: server.c $(HDR)
+client.o: client.c packet.h
+server.o: server.c packet.h
 
 client: util.o client.o
 server: util.o server.o
