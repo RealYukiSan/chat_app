@@ -15,18 +15,28 @@ TOOLCHAIN := $(NDK)/toolchains/llvm/prebuilt/linux-x86_64
 CFLAGS	:= -Wall -Wextra -O2 -ggdb3
 CC	:= $(TOOLCHAIN)/bin/$(TRIPLET)$(API_LEVEL)-clang
 
+ifdef SERVER_ADDR
+CFLAGS += -DSERVER_ADDR=\"$(SERVER_ADDR)\"
+endif
+
+ifdef SERVER_PORT
+CFLAGS += -DSERVER_PORT=$(SERVER_PORT)
+endif
+
 all: create_dir $(DESTDIR)/client $(DESTDIR)/server
 
 HDR = ../util.h ../packet.h
+CLIENT = ../util.c ../client.c
+SERVER = ../util.c ../server.c
 
 create_dir:
-	mkdir -p $(DESTDIR)
+	@mkdir -p $(DESTDIR)
 
-$(DESTDIR)/client:
-	$(CC) -o $(DESTDIR)/client ../client.c
+$(DESTDIR)/client: $(HDR) $(CLIENT)
+	$(CC) -o $(DESTDIR)/client $(CLIENT)
 
-$(DESTDIR)/server:
-	$(CC) -o $(DESTDIR)/server ../server.c
+$(DESTDIR)/server: $(HDR) $(SERVER)
+	$(CC) -o $(DESTDIR)/server $(SERVER)
 
 clean:
 	rm -vfr $(DESTDIR)

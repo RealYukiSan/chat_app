@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #else
 #include <winsock2.h>
+#define STDIN_FILENO __fileno(stdin)
 #endif
 
 #include <stdio.h>
@@ -290,7 +291,7 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 static int initialize_ctx(struct client_ctx *cl_ctx)
 {
 	struct sockaddr_in client_addr;
-	int len = sizeof(client_addr);
+	socklen_t len = sizeof(client_addr);
 	#ifdef _WIN32
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -311,13 +312,13 @@ static int initialize_ctx(struct client_ctx *cl_ctx)
 
 	printf("Successfuly connected to %s:%d\n", SERVER_ADDR, SERVER_PORT);
 
-	getsockname(cl_ctx->tcp_fd, &client_addr, &len);
+	getsockname(cl_ctx->tcp_fd, (struct sockaddr *)&client_addr, &len);
 	printf("Client port: %d\n", ntohs(client_addr.sin_port));
 
 	cl_ctx->fds[0].fd = cl_ctx->tcp_fd;
 	cl_ctx->fds[0].events = POLLIN;
 
-	cl_ctx->fds[1].fd = _fileno(stdin);
+	cl_ctx->fds[1].fd = STDIN_FILENO;
 	cl_ctx->fds[1].events = POLLIN;
 
 	cl_ctx->recv_len = 0;
@@ -335,10 +336,10 @@ int main(void)
 	start_event_loop(&cl_ctx);
 	#ifdef _WIN32
 	closesocket(cl_ctx.tcp_fd);
+	WSACleanup();
 	#else
 	close(cl_ctx.tcp_fd);
 	#endif
-	WSACleanup();
 
 	return 0;
 }
