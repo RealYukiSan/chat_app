@@ -46,6 +46,11 @@ static int connect_server(void)
 		return -1;
 	}
 
+	#ifdef _WIN32
+	u_long mode = 1;
+	ioctlsocket(fd, FIONBIO, &mode);
+	#endif
+
 	memset(&addr, 0, sizeof(addr));
 	inet_pton(AF_INET, server_addr, &addr.sin_addr);
 	addr.sin_port = htons(SERVER_PORT);
@@ -54,16 +59,15 @@ static int connect_server(void)
 	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		#ifndef _WIN32
 		perror("connect");
+		close(fd);
 		#else
+		if (WSAGetLastError() == WSAEWOULDBLOCK)
+			return fd;
 		// possible error: https://learn.microsoft.com/en-us/windows/win32/winsock/windows-sockets-error-codes-2
 		printf("connect: %d\n", WSAGetLastError());
+		closesocket(fd);
 		#endif
 
-		#ifdef _WIN32
-		closesocket(fd);
-		#else
-		close(fd);
-		#endif
 		return -1;
 	}
 
