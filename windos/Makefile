@@ -9,6 +9,10 @@ ifdef SERVER_PORT
 CFLAGS += -DSERVER_PORT=$(SERVER_PORT)
 endif
 
+ifdef DEBUG
+CFLAGS += -DDEBUG
+endif
+
 all: client server
 
 util.o: ../util.c ../util.h

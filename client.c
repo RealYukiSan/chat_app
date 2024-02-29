@@ -259,7 +259,7 @@ static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
 static void start_event_loop(struct client_ctx *cl_ctx)
 {
 	int nr_ready;
-	printf("Program ID: %d\n", getpid());
+	DEBUG_PRINT("Program ID: %d\n", getpid());
 
 	cl_ctx->need_reload_prompt = true;
 	while (1) {
@@ -276,7 +276,7 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 		h[0] = cl_ctx->fds[0].fd;
 		h[1] = GetStdHandle(STD_INPUT_HANDLE);
 		nr_ready = WaitForMultipleObjects(2, h, FALSE, INFINITE);
-		printf("\nerror code: %d and nr_ready = %d\n", WSAGetLastError(), nr_ready);
+		DEBUG_PRINT("\nerror code: %d and nr_ready = %d\n", WSAGetLastError(), nr_ready);
 		#endif
 
 		if (nr_ready < 0) {
@@ -294,8 +294,6 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 
 static int initialize_ctx(struct client_ctx *cl_ctx)
 {
-	struct sockaddr_in client_addr;
-	socklen_t len = sizeof(client_addr);
 	#ifdef _WIN32
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -316,8 +314,12 @@ static int initialize_ctx(struct client_ctx *cl_ctx)
 
 	printf("Successfuly connected to %s:%d\n", SERVER_ADDR, SERVER_PORT);
 
+	#ifdef DEBUG
+	struct sockaddr_in client_addr;
+	socklen_t len = sizeof(client_addr);
 	getsockname(cl_ctx->tcp_fd, (struct sockaddr *)&client_addr, &len);
-	printf("Client port: %d\n", ntohs(client_addr.sin_port));
+	DEBUG_PRINT("Client port: %d\n", ntohs(client_addr.sin_port));
+	#endif
 
 	cl_ctx->fds[0].fd = cl_ctx->tcp_fd;
 	cl_ctx->fds[0].events = POLLIN;

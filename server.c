@@ -245,7 +245,7 @@ static int accept_new_connection(struct server_ctx *srv_ctx)
 	int fd;
 
 	fd = accept(srv_ctx->tcp_fd, (struct sockaddr *)&addr, &addr_len);
-	printf("fd on accept: %d\n", fd);
+	DEBUG_PRINT("fd on accept: %d\n", fd);
 	#ifdef _WIN32
 	u_long mode = 1;
 	ioctlsocket(fd, FIONBIO, &mode);
@@ -439,7 +439,7 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 	#endif
 
 	buf = (char *)&cs->pkt + cs->recv_len;
-	printf("fd on recv: %d\n", cs->fd);
+	DEBUG_PRINT("fd on recv: %d\n", cs->fd);
 	ret = recv(cs->fd, buf, sizeof(cs->pkt) - cs->recv_len, flag);
 	if (ret < 0) {
 		#ifdef __WIN32
@@ -506,7 +506,7 @@ static int handle_events(struct server_ctx *srv_ctx, int nr_event)
 static void start_event_loop(struct server_ctx *srv_ctx)
 {
 	int ret;
-	printf("PID: %d\n", getpid());
+	DEBUG_PRINT("PID: %d\n", getpid());
 
 	while (1) {
 		#ifndef __WIN32

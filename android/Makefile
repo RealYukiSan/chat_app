@@ -23,6 +23,10 @@ ifdef SERVER_PORT
 CFLAGS += -DSERVER_PORT=$(SERVER_PORT)
 endif
 
+ifdef DEBUG
+CFLAGS += -DDEBUG
+endif
+
 all: create_dir $(DESTDIR)/client $(DESTDIR)/server
 
 create_dir:
