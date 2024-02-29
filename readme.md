@@ -9,6 +9,9 @@
 **and other members on [GNU/Weeb](https://www.gnuweeb.org/)!**
 
 ### A few note
+- So far, this program not stable and won't work properly on windows platform, known issue are:
+  - [server] WSAPoll not notify or dispatch event on client disconnect
+  - [client] WaitForMultipleObjects never response to recv from file descriptor tcp socket
 - [I/O Multiplexing](https://notes.shichao.io/unp/ch6)
 - TIL windows cannot connect to 0.0.0.0 while linux can do it, on windows, address 0.0.0.0 only useful for listen on all interface 
 - [good article](https://makefiletutorial.com/) about make and Makefile script

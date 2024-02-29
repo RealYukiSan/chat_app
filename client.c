@@ -91,7 +91,11 @@ static int send_message(struct client_ctx *cl_ctx, size_t len)
 
 	pkt_len = prep_pkt_msg(pkt, cl_ctx->msg, len);
 	if (send(cl_ctx->tcp_fd, pkt, pkt_len, 0) < 0) {
+		#ifndef __WIN32
 		perror("send");
+		#else
+		printf("send: %d\n", WSAGetLastError());
+		#endif
 		free(pkt);
 		return -1;
 	}
@@ -234,7 +238,6 @@ static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
 			return -1;
 	}
 	#else
-	__asm__("int3");
 	if (nr_ready == WAIT_OBJECT_0 + 1) {
 		if (handle_user_input(cl_ctx) < 0)
 			return -1;
@@ -269,7 +272,7 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 		h[0] = cl_ctx->fds[0].fd;
 		h[1] = GetStdHandle(STD_INPUT_HANDLE);
 		nr_ready = WaitForMultipleObjects(2, h, FALSE, INFINITE);
-		// printf("\nerror code: %d\nnr_ready = %d\n", WSAGetLastError(), nr_ready);
+		printf("\nerror code: %d and nr_ready = %d\n", WSAGetLastError(), nr_ready);
 		#endif
 
 		if (nr_ready < 0) {

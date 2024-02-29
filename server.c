@@ -120,8 +120,15 @@ static int broadcast_join(struct server_ctx *srv_ctx, uint32_t idx, const char *
 		if (idx == i || srv_ctx->clients[i].fd < 0)
 			continue;
 
-		if (send(srv_ctx->clients[i].fd, pkt, pkt_len, 0) < 0)
+		if (send(srv_ctx->clients[i].fd, pkt, pkt_len, 0) < 0) {
+			puts("[broadcast_join]");
+			#ifndef __WIN32
+			perror("send");
+			#else
+			printf("send: %d\n", WSAGetLastError());
+			#endif
 			close_cl(srv_ctx, idx);
+		}
 	}
 
 	free(pkt);
@@ -182,7 +189,12 @@ static int sync_history(struct server_ctx *srv_ctx, int cs_fd)
 		pkt->len = htons(msg_len + sizeof(pkt->msg_id));
 		pkt->type = SR_PKT_MSG_ID;
 		if (send(cs_fd, pkt, HEADER_SIZE + msg_len + sizeof(pkt->msg_id), 0) < 0) {
+			puts("[sync_history]");
+			#ifndef __WIN32
 			perror("send");
+			#else
+			printf("send: %d\n", WSAGetLastError());
+			#endif
 			free(pkt);
 			return -1;
 		}
@@ -208,6 +220,7 @@ static int plug_client(int fd, struct sockaddr_in addr, struct server_ctx *srv_c
 	if (!cs)
 		return -1;
 
+	printf("plug_client: %d\n", fd);
 	cs->fd = fd;
 	cs->addr = addr;
 	srv_ctx->fds[i + 1].fd = fd;
@@ -293,7 +306,12 @@ static int broadcast_msg(struct packet *pkt, struct server_ctx *srv_ctx, struct 
 			continue;
 
 		if (send(srv_ctx->clients[i].fd, pkt, pkt_len, 0) < 0) {
+			puts("[broadcast_msg]");
+			#ifndef __WIN32
 			perror("send");
+			#else
+			printf("send: %d\n", WSAGetLastError());
+			#endif
 			return -1;
 		}
 	}
@@ -390,8 +408,15 @@ static int broadcast_leave(struct server_ctx *srv_ctx, struct client_state *cs)
 		if (cs == &srv_ctx->clients[i] || srv_ctx->clients[i].fd < 0)
 			continue;
 
-		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0) < 0)
+		if (send(srv_ctx->clients[i].fd, pkt, HEADER_SIZE + IP4_IDENTITY_SIZE, 0) < 0) {
+			puts("[broadcast_leave]");
+			#ifndef __WIN32
+			perror("send");
+			#else
+			printf("send: %d\n", WSAGetLastError());
+			#endif
 			close_cl(srv_ctx, i);
+		}
 	}
 
 	free(pkt);
@@ -416,6 +441,9 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 	buf = (char *)&cs->pkt + cs->recv_len;
 	ret = recv(cs->fd, buf, sizeof(cs->pkt) - cs->recv_len, flag);
 	if (ret < 0) {
+		#ifdef __WIN32
+		printf("recv: %d\n", WSAGetLastError());
+		#endif
 		if (ret == EAGAIN || ret == EINTR)
 			return 0;
 
@@ -424,13 +452,14 @@ static int handle_event(struct server_ctx *srv_ctx, size_t id_client)
 		return -1;
 	}
 
+	printf("the ret == 0 never matched: %lld\n", ret);
 	if (ret == 0) {
 		// TODO: find out why the event on disconnect not dispatched
 		// it seems the WSAPoll function cannot recognize disconnected client and won't be able to notify us
 		// https://github.com/pocoproject/poco/issues/3248
 		printf("Client disconnected\n");
 		broadcast_leave(srv_ctx, cs);
-		
+
 		return -1;
 	}
 
