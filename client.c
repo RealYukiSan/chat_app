@@ -208,10 +208,16 @@ static int handle_server(struct client_ctx *cl_ctx)
 	buf = (char *)&cl_ctx->pkt + cl_ctx->recv_len;
 	ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt) - cl_ctx->recv_len, flag);
 	if (ret < 0) {
+		#ifdef _WIN32
+		if (WSAGetLastError() == WSAEWOULDBLOCK)
+			return 0;
+		DEBUG_PRINT("error code: %d\n", WSAGetLastError());
+		#else
 		if (errno == EAGAIN || errno == EINTR)
 			return 0;
 
 		perror("recv");
+		#endif
 		return -1;
 	}
 
@@ -273,11 +279,16 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 		nr_ready = poll(cl_ctx->fds, 2, -1);
 		#else
 		HANDLE h[2];
-		h[0] = cl_ctx->fds[0].fd;
+		WSAEVENT recvEvent;
+
+		recvEvent = WSACreateEvent();
+		WSAEventSelect(cl_ctx->fds[0].fd, recvEvent, FD_READ);
+
+		h[0] = recvEvent;
 		h[1] = GetStdHandle(STD_INPUT_HANDLE);
 		nr_ready = WaitForMultipleObjects(2, h, FALSE, INFINITE);
-		DEBUG_PRINT("\nerror code: %d and nr_ready = %d\n", WSAGetLastError(), nr_ready);
 		#endif
+		DEBUG_PRINT("nr_ready = %d\n", nr_ready);
 
 		if (nr_ready < 0) {
 			if (errno == EINTR)
