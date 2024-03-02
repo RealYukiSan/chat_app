@@ -235,9 +235,9 @@ static int handle_server(struct client_ctx *cl_ctx)
 	return 0;
 }
 
-static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
+#ifndef _WIN32
+static int handle_events(struct client_ctx *cl_ctx)
 {
-	#ifndef _WIN32
 	if (cl_ctx->fds[0].revents & POLLIN) {
 		if (handle_server(cl_ctx) < 0)
 			return -1;
@@ -247,20 +247,25 @@ static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
 		if (handle_user_input(cl_ctx) < 0)
 			return -1;
 	}
-	#else
+
+	return 0;
+}
+#else
+static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
+{
+	if (nr_ready == WAIT_OBJECT_0) {
+		if (handle_server(cl_ctx) < 0)
+			return -1;
+	}
+
 	if (nr_ready == WAIT_OBJECT_0 + 1) {
 		if (handle_user_input(cl_ctx) < 0)
 			return -1;
 	}
 
-	if (nr_ready == WAIT_OBJECT_0) {
-		if (handle_server(cl_ctx) < 0)
-			return -1;
-	}
-	#endif
-
 	return 0;
 }
+#endif
 
 static void start_event_loop(struct client_ctx *cl_ctx)
 {
@@ -277,6 +282,14 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 
 		#ifndef __WIN32
 		nr_ready = poll(cl_ctx->fds, 2, -1);
+
+		if (nr_ready < 0) {
+			if (errno == EINTR)
+				continue;
+
+			perror("poll");
+			break;
+		}
 		#else
 		HANDLE h[2];
 		WSAEVENT recvEvent;
@@ -290,15 +303,13 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 		#endif
 		DEBUG_PRINT("nr_ready = %d\n", nr_ready);
 
-		if (nr_ready < 0) {
-			if (errno == EINTR)
-				continue;
-
-			perror("poll");
-			break;
-		}
-
-		if (handle_events(cl_ctx, nr_ready) < 0)
+		if (
+			#ifdef __WIN32
+			handle_events(cl_ctx, nr_ready) < 0
+			#else
+			handle_events(cl_ctx) < 0
+			#endif
+		)
 			break;
 	}
 }
