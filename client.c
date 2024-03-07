@@ -193,31 +193,64 @@ try_again:
 	return 0;
 }
 
+#ifdef __WIN32
+DWORD WINAPI handle_server(LPVOID param)
+{
+	struct client_ctx *cl_ctx;
+	char *buf;
+	WSAEVENT recvEvent;
+	ssize_t ret;
+
+	cl_ctx = (struct client_ctx *)param;
+	recvEvent = WSACreateEvent();
+	WSAEventSelect(cl_ctx->tcp_fd, recvEvent, FD_READ);
+
+	// unsigned int n = 0;
+	// while (1) {
+	// 	printf("n = %d\n", n);
+	// 	n++;
+	// }
+
+	// todo: find out why the thread closed immediately when using WaitForSingleObject? the above loop not behave like the below one
+	while (1) {
+		WaitForSingleObject(recvEvent, 0);
+
+		buf = (char *)&cl_ctx->pkt + cl_ctx->recv_len;
+		ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt) - cl_ctx->recv_len, 0);
+		if (ret < 0) {
+			if (WSAGetLastError() == WSAEWOULDBLOCK)
+				return 0;
+			printf("error code: %d\n", WSAGetLastError());
+			return -1;
+		}
+
+		if (ret == 0) {
+			printf("\nServer disconnected\n");
+			return -1;
+		}
+
+		cl_ctx->recv_len += ret;
+		if (process_srv_packet(cl_ctx) < 0)
+			return -1;
+
+		cl_ctx->need_reload_prompt = true;
+	}
+
+	return 0;
+}
+#else
 static int handle_server(struct client_ctx *cl_ctx)
 {
 	char *buf;
 	ssize_t ret;
-	unsigned int flag;
-
-	#ifndef _WIN32
-	flag = MSG_DONTWAIT;
-	#else
-	flag = 0;
-	#endif
 
 	buf = (char *)&cl_ctx->pkt + cl_ctx->recv_len;
-	ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt) - cl_ctx->recv_len, flag);
+	ret = recv(cl_ctx->tcp_fd, buf, sizeof(cl_ctx->pkt) - cl_ctx->recv_len, MSG_DONTWAIT);
 	if (ret < 0) {
-		#ifdef _WIN32
-		if (WSAGetLastError() == WSAEWOULDBLOCK)
-			return 0;
-		DEBUG_PRINT("error code: %d\n", WSAGetLastError());
-		#else
 		if (errno == EAGAIN || errno == EINTR)
 			return 0;
 
 		perror("recv");
-		#endif
 		return -1;
 	}
 
@@ -234,10 +267,30 @@ static int handle_server(struct client_ctx *cl_ctx)
 
 	return 0;
 }
+#endif
 
-static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
+#ifdef __WIN32
+static void start_event_loop(struct client_ctx *cl_ctx)
 {
-	#ifndef _WIN32
+	DWORD threadId;
+	HANDLE netThread;
+	netThread = CreateThread(NULL, 0, handle_server, cl_ctx, 0, &threadId);
+
+	cl_ctx->need_reload_prompt = true;
+	while (1) {
+		if (cl_ctx->need_reload_prompt) {
+			printf(PLACE_HOLDER);
+			fflush(stdout);
+			cl_ctx->need_reload_prompt = false;
+		}
+		handle_user_input(cl_ctx);
+	}
+
+	WaitForSingleObject(netThread, INFINITE);
+}
+#else
+static int handle_events(struct client_ctx *cl_ctx)
+{
 	if (cl_ctx->fds[0].revents & POLLIN) {
 		if (handle_server(cl_ctx) < 0)
 			return -1;
@@ -247,17 +300,6 @@ static int handle_events(struct client_ctx *cl_ctx, int nr_ready)
 		if (handle_user_input(cl_ctx) < 0)
 			return -1;
 	}
-	#else
-	if (nr_ready == WAIT_OBJECT_0 + 1) {
-		if (handle_user_input(cl_ctx) < 0)
-			return -1;
-	}
-
-	if (nr_ready == WAIT_OBJECT_0) {
-		if (handle_server(cl_ctx) < 0)
-			return -1;
-	}
-	#endif
 
 	return 0;
 }
@@ -275,19 +317,7 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 			cl_ctx->need_reload_prompt = false;
 		}
 
-		#ifndef __WIN32
 		nr_ready = poll(cl_ctx->fds, 2, -1);
-		#else
-		HANDLE h[2];
-		WSAEVENT recvEvent;
-
-		recvEvent = WSACreateEvent();
-		WSAEventSelect(cl_ctx->fds[0].fd, recvEvent, FD_READ);
-
-		h[0] = recvEvent;
-		h[1] = GetStdHandle(STD_INPUT_HANDLE);
-		nr_ready = WaitForMultipleObjects(2, h, FALSE, INFINITE);
-		#endif
 		DEBUG_PRINT("nr_ready = %d\n", nr_ready);
 
 		if (nr_ready < 0) {
@@ -298,10 +328,11 @@ static void start_event_loop(struct client_ctx *cl_ctx)
 			break;
 		}
 
-		if (handle_events(cl_ctx, nr_ready) < 0)
+		if (handle_events(cl_ctx) < 0)
 			break;
 	}
 }
+#endif
 
 static int initialize_ctx(struct client_ctx *cl_ctx)
 {
