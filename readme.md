@@ -13,6 +13,8 @@
   - [server] WSAPoll not notify or dispatch event on client disconnect - fixed on this [commit](https://github.com/RealYukiSan/chat_app/commit/8df8c5f5242b3951c208db6a4108c98437340412)
   - [server] excees padding on the reply packet from server to client - fixed on this [commit](https://github.com/RealYukiSan/chat_app/commit/fc0b01c)
   - [client] WaitForMultipleObjects never response to recv from file descriptor tcp socket
+- Well known bug on linux platform:
+  - [client] need to figure out how to copy buffer from stdin to stdout when '\r' printed
 - [I/O Multiplexing](https://notes.shichao.io/unp/ch6)
 - TIL windows cannot connect to 0.0.0.0 while linux can do it, on windows, address 0.0.0.0 only useful for listen on all interface 
 - [good article](https://makefiletutorial.com/) about make and Makefile script
