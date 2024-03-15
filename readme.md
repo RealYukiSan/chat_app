@@ -1,3 +1,5 @@
+# This branch is intended for historical purposes only.
+
 ## Simple Chat on TCP socket with full-duplex / multiplex communication
 
 **things that I marked with (?) indicate statements that I still have doubts about**
