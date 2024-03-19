@@ -2,6 +2,7 @@
 
 # https://t.me/GNUWeeb/854603 and https://gcc.gnu.org/legacy-ml/gcc-help/2009-02/msg00130.html
 CFLAGS := -Wall -Wextra -O2 -ggdb3
+LDFLAGS := -luv
 
 ifdef SERVER_ADDR
 CFLAGS += -DSERVER_ADDR=\"$(SERVER_ADDR)\"

@@ -50,11 +50,6 @@ struct packet_msg_event {
 struct packet {
 	uint8_t	 	type;
 	uint8_t	 	__pad;
-	/**
-	 * one question: is this member really needed? I mean, its value can be replicated by sizeof(struct packet) + msg len
-	 * answer: ofc if you use sizeof(struct packet) the union size will be picked; in this case, the larger member is __raw_buf
-	 * so it is not efficient since the flexible or dynamic array isn't used anymore.
-	*/
 	uint16_t	len;
 	union {
 		/* broadcast data from server to clients */
@@ -81,16 +76,16 @@ static inline size_t prep_pkt_msg_id(struct packet *pkt, const char *id, const c
 	return HEADER_SIZE + body_len;
 }
 
-static inline size_t prep_pkt_msg(struct packet *pkt, const char *msg, size_t len)
+static inline size_t prep_pkt_msg(struct packet pkt, const char *msg, size_t len)
 {
 	/* Make it dynamic/flexible, Just send occupied size */
 	size_t body_len;
 
-	body_len = sizeof(pkt->msg) + len;
-	pkt->type = CL_PKT_MSG;
-	pkt->len = htons(body_len);
-	pkt->msg.len = htons(len);
-	memcpy(pkt->msg.data, msg, len);
+	body_len = sizeof(pkt.msg) + len;
+	pkt.type = CL_PKT_MSG;
+	pkt.len = htons(body_len);
+	pkt.msg.len = htons(len);
+	memcpy(pkt.msg.data, msg, len);
 
 	return HEADER_SIZE + body_len;
 }
