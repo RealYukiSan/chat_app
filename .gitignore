@@ -2,6 +2,7 @@ android/**/out
 client
 server
 *.o
+udp_version/.clangd
 *.out
 *.exe
 .vscode/
