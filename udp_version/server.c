@@ -14,8 +14,8 @@ int main(void)
 	address.host = ENET_HOST_ANY;
 	address.port = 6969;
 	server = enet_host_create(&address, 1, 2, 0, 0);
-	// server->checksum = enet_crc32;
-	// enet_host_compress_with_range_coder(server);
+	server->checksum = enet_crc32;
+	enet_host_compress_with_range_coder(server);
 
 	puts("STARTING EVENT LOOP...");
 	while (1) {

@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <enet/enet.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,9 +16,9 @@ int main(void)
 	enet_initialize();
 
 	client = enet_host_create(NULL, 1, 2, 0, 0);
-	// client->checksum = enet_crc32;
+	client->checksum = enet_crc32;
 	// client->usingNewPacket = 1;
-	// enet_host_compress_with_range_coder(client);
+	enet_host_compress_with_range_coder(client);
 
 	fds[0].fd = STDIN_FILENO;
 	fds[0].events = POLLIN;
